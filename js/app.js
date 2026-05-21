@@ -481,11 +481,41 @@ const App = {
     const badge = document.getElementById('sourceBadge');
     const sourceName = I18N.lang === "en" && this.state.source === "worldbank" ? "World Bank" : info.name;
     const freq = I18N.lang === "en" ? (info.frequency === "Mensuelle" ? "Monthly" : info.frequency === "Annuelle" ? "Annual" : "Daily (simulated)") : info.frequency;
-    badge.innerHTML = `${info.icon} ${I18N.t("source_badge")} <strong>${sourceName}</strong> (${freq}) — ${I18N.t("source_updated")} : <span id="sourceDate">--</span>`;
+
+    // Construction DOM safe — pas d'innerHTML, info.url whitelistée http(s)
+    badge.textContent = '';
+    badge.appendChild(document.createTextNode(`${info.icon} ${I18N.t("source_badge")} `));
+
+    const strong = document.createElement('strong');
+    strong.textContent = sourceName;
+    badge.appendChild(strong);
+
+    badge.appendChild(document.createTextNode(` (${freq}) — ${I18N.t("source_updated")} : `));
+
+    const dateSpan = document.createElement('span');
+    dateSpan.id = 'sourceDate';
+    dateSpan.textContent = '--';
+    badge.appendChild(dateSpan);
+
     if (info.url) {
-      badge.innerHTML += ` — <a href="${info.url}" target="_blank" rel="noopener" style="color:var(--olive);text-decoration:underline;">${I18N.t("source_learn_more")}</a>`;
+      badge.appendChild(document.createTextNode(' — '));
+      const a = document.createElement('a');
+      a.href = /^https?:\/\//i.test(info.url) ? info.url : '#';
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.style.color = 'var(--olive)';
+      a.style.textDecoration = 'underline';
+      a.textContent = I18N.t("source_learn_more");
+      badge.appendChild(a);
     }
-    badge.innerHTML += ` — <a href="#" class="sources-link" id="openSourcesPage">${I18N.t("sources_link")}</a>`;
+
+    badge.appendChild(document.createTextNode(' — '));
+    const sourcesLink = document.createElement('a');
+    sourcesLink.href = '#';
+    sourcesLink.className = 'sources-link';
+    sourcesLink.id = 'openSourcesPage';
+    sourcesLink.textContent = I18N.t("sources_link");
+    badge.appendChild(sourcesLink);
   },
 
   updateSourceTooltip() {

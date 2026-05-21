@@ -324,21 +324,49 @@ const AlertsManager = {
     if (!list) return;
 
     if (this._history.length === 0) {
-      list.innerHTML = `<div class="alerts-history-empty" data-i18n="alerts_history_empty">${I18N.t('alerts_history_empty')}</div>`;
+      list.textContent = '';
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'alerts-history-empty';
+      emptyDiv.setAttribute('data-i18n', 'alerts_history_empty');
+      emptyDiv.textContent = I18N.t('alerts_history_empty');
+      list.appendChild(emptyDiv);
       return;
     }
 
     // Show last 10, most recent first
+    // Construction DOM safe : h.text / h.time / h.commodityId proviennent du
+    // localStorage qui peut être altéré (extension malveillante, accès local)
     const items = this._history.slice(-10).reverse();
-    list.innerHTML = items.map((h, i) => {
-      const reusable = h.commodityId ? 'alert-history-reusable' : '';
-      const idx = this._history.length - 1 - i; // real index in _history array
-      return `<div class="alert-history-item ${reusable}" ${h.commodityId ? `data-hist-idx="${idx}"` : ''} ${h.commodityId ? 'title="' + I18N.t('alerts_reuse_hint') + '"' : ''}>
-        <span class="alert-history-time">${h.time}</span>
-        <span>${h.text}</span>
-        ${h.commodityId ? '<span class="alert-history-reuse-icon">↩</span>' : ''}
-      </div>`;
-    }).join('');
+    list.textContent = '';
+    items.forEach((h, i) => {
+      const idx = this._history.length - 1 - i; // index réel dans _history
+      const isReusable = !!h.commodityId;
+
+      const div = document.createElement('div');
+      div.className = 'alert-history-item' + (isReusable ? ' alert-history-reusable' : '');
+      if (isReusable) {
+        div.dataset.histIdx = String(idx);
+        div.title = I18N.t('alerts_reuse_hint');
+      }
+
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'alert-history-time';
+      timeSpan.textContent = h.time || '';
+      div.appendChild(timeSpan);
+
+      const textSpan = document.createElement('span');
+      textSpan.textContent = h.text || '';
+      div.appendChild(textSpan);
+
+      if (isReusable) {
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'alert-history-reuse-icon';
+        iconSpan.textContent = '↩';
+        div.appendChild(iconSpan);
+      }
+
+      list.appendChild(div);
+    });
 
     // Bind click on reusable history items
     list.querySelectorAll('.alert-history-reusable').forEach(el => {
