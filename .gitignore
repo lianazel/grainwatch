@@ -1,0 +1,19 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node (if ever used locally)
+node_modules/
+package-lock.json
+
+# Old deploy folder
+site/
+
+# Deploy script (not needed on GitHub)
+DEPLOY_GITHUB.bat

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sS https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js)",
+      "Bash(openssl dgst *)",
+      "Bash(openssl base64 *)"
+    ]
+  }
+}

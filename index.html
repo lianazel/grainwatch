@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self';
+             script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+             connect-src 'self' https://api.worldbank.org https://apps.fas.usda.gov https://api.gdeltproject.org;
+             style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+             font-src https://fonts.gstatic.com;
+             img-src 'self' data:;
+             base-uri 'self';
+             form-action 'self';
+             frame-ancestors 'none';">
+  <title>GrainWatch — Cours Mondiaux des Denrées Alimentaires</title>
+  <meta name="description" content="Suivi en temps réel des cours mondiaux des denrées alimentaires : blé, maïs, riz, soja, café, cacao et plus.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
+          integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"
+          crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"
+          integrity="sha384-cVMg8E3QFwTvGCDuK+ET4PD341jF3W8nO1auiXfuZNQkzbUUiBGLsIQUE+b1mxws"
+          crossorigin="anonymous"></script>
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="15" stroke="#C0392B" stroke-width="2" fill="#FDF6E3"/>
+          <path d="M16 6 C16 6, 12 12, 12 18 C12 22, 14 24, 16 26 C18 24, 20 22, 20 18 C20 12, 16 6, 16 6Z" fill="#6B7C2D" opacity="0.8"/>
+          <path d="M16 10 C16 10, 14 14, 14 18 C14 20, 15 22, 16 23 C17 22, 18 20, 18 18 C18 14, 16 10, 16 10Z" fill="#D4A843" opacity="0.6"/>
+        </svg>
+        <h1>GrainWatch</h1>
+      </div>
+      <span class="update-time" id="updateTime">Mis à jour à --:--</span>
+    </div>
+    <div class="header-right">
+      <!-- SOURCE SELECTOR -->
+      <div class="selector-with-tooltip">
+        <div class="tooltip-bubble" id="tooltipSource">
+          <span class="tooltip-icon">📡</span>
+          <span>D'où viennent les prix ? Choisissez l'organisme international qui fournit les données.</span>
+          <div class="tooltip-arrow"></div>
+        </div>
+        <div class="source-selector">
+          <button class="source-btn active" data-source="worldbank" title="Banque Mondiale">
+            <span class="source-dot"></span> 🏛️ Banque Mondiale
+          </button>
+          <button class="source-btn" data-source="usda" title="USDA">
+            <span class="source-dot"></span> 🇺🇸 USDA
+          </button>
+          <button class="source-btn" data-source="simulated" title="Données simulées">
+            <span class="source-dot"></span> 🔬 Simulation
+          </button>
+        </div>
+      </div>
+
+      <!-- CURRENCY SELECTOR -->
+      <div class="selector-with-tooltip">
+        <div class="tooltip-bubble" id="tooltipCurrency">
+          <span class="tooltip-icon">💱</span>
+          <span id="tooltipCurrencyText">Devise d'affichage. Les cours de base sont en dollars US, convertis selon le taux du jour.</span>
+          <div class="tooltip-arrow"></div>
+        </div>
+        <div class="currency-selector">
+          <button class="currency-btn active" data-currency="USD">$ USD</button>
+          <button class="currency-btn" data-currency="EUR">€ EUR</button>
+        </div>
+      </div>
+
+      <!-- THEME TOGGLE (dark/light) -->
+      <button class="theme-toggle" id="themeToggle" title="Mode sombre / clair">
+        <span id="themeIcon">🌙</span>
+      </button>
+
+      <!-- LANGUAGE TOGGLE -->
+      <button class="lang-toggle" id="langToggle" title="Français / English">
+        <span class="lang-flag" id="langFlag">🇫🇷</span>
+        <span class="lang-code" id="langCode">FR</span>
+      </button>
+
+      <!-- ALERTS BELL -->
+      <button class="alerts-bell" id="alertsBell" title="Alertes">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="alerts-badge" id="alertsBadge" style="display:none;">0</span>
+      </button>
+
+      <button class="refresh-btn" id="refreshBtn" title="Rafraîchir les données">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+        Rafraîchir
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT -->
+  <main class="main-layout">
+    <!-- LEFT: COMMODITY LIST -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-tabs">
+        <button class="tab-btn active" data-tab="all" data-i18n="tab_all">Toutes</button>
+        <button class="tab-btn" data-tab="favorites" data-i18n="tab_favorites">★ Favoris</button>
+      </div>
+      <div class="commodity-list" id="commodityList">
+        <!-- Generated by JS -->
+      </div>
+      <div class="sidebar-footer">
+        <button class="customize-btn" id="customizeBtn" title="Personnaliser les denrées affichées">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span data-i18n="customize_btn">Personnaliser</span>
+        </button>
+      </div>
+
+      <!-- Customize panel (overlay) -->
+      <div class="customize-panel" id="customizePanel">
+        <div class="customize-header">
+          <h3 data-i18n="customize_title">Denrées affichées</h3>
+          <button class="customize-close" id="customizeClose">&times;</button>
+        </div>
+
+        <!-- Add commodity dropdown -->
+        <div class="customize-add-row">
+          <select class="customize-select" id="addCommoditySelect">
+            <option value="" data-i18n="customize_add_placeholder">Ajouter une denrée...</option>
+          </select>
+          <button class="customize-add-btn" id="addCommodityBtn" data-i18n="customize_add_btn">Ajouter</button>
+        </div>
+
+        <p class="customize-hint" data-i18n="customize_hint">Cochez les denrées à afficher dans la barre latérale.</p>
+        <div class="customize-list" id="customizeList">
+          <!-- Generated by JS -->
+        </div>
+        <div class="customize-actions">
+          <button class="customize-select-all" id="selectAllBtn" data-i18n="customize_all">Tout cocher</button>
+          <button class="customize-reset" id="resetBtn" data-i18n="customize_reset">Réinitialiser (12 par défaut)</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: CHART & DETAILS -->
+    <section class="detail-panel">
+      <!-- MOBILE BACK BUTTON -->
+      <button class="mobile-back-btn" id="mobileBackBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <span data-i18n="back_to_list">Retour à la liste</span>
+      </button>
+
+      <div class="detail-header" id="detailHeader">
+        <div class="detail-title">
+          <span class="commodity-icon" id="detailIcon">🌾</span>
+          <h2 id="detailName">Blé</h2>
+          <span class="commodity-code" id="detailCode">WHEAT</span>
+        </div>
+        <div class="detail-price-row">
+          <span class="detail-price loading-pulse" id="detailPrice">Chargement...</span>
+          <span class="detail-unit" id="detailUnit"></span>
+          <span class="detail-change" id="detailChange"></span>
+        </div>
+      </div>
+
+      <!-- PERIOD SELECTOR -->
+      <div class="selector-with-tooltip inline-tooltip">
+        <div class="tooltip-bubble" id="tooltipPeriod">
+          <span class="tooltip-icon">📅</span>
+          <span>Fenêtre temporelle du graphique. Plus la période est longue, plus vous voyez la tendance de fond.</span>
+          <div class="tooltip-arrow"></div>
+        </div>
+        <div class="period-selector">
+          <span class="period-label" data-i18n="period_label">Période :</span>
+          <div class="period-buttons">
+            <button class="period-btn" data-period="30" data-i18n="period_1m">1 mois</button>
+            <button class="period-btn" data-period="90" data-i18n="period_3m">3 mois</button>
+            <button class="period-btn active" data-period="180" data-i18n="period_6m">6 mois</button>
+            <button class="period-btn" data-period="365" data-i18n="period_1y">1 an</button>
+            <button class="period-btn" data-period="1825" data-i18n="period_5y">5 ans</button>
+            <button class="period-btn" data-period="3650" data-i18n="period_10y">10 ans</button>
+            <button class="period-btn" data-period="5475" data-i18n="period_15y">15 ans</button>
+            <button class="period-btn period-btn-custom" id="customPeriodToggle" data-i18n="period_custom">Personnalisé</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CUSTOM DATE RANGE PICKER -->
+      <div class="custom-range-picker" id="customRangePicker" style="display:none;">
+        <div class="custom-range-row">
+          <div class="custom-range-field">
+            <label data-i18n="range_from">Du</label>
+            <div class="custom-range-inputs">
+              <input type="number" id="rangeMonthStart" class="range-input" min="1" max="12" placeholder="MM" />
+              <span class="range-separator">/</span>
+              <input type="number" id="rangeYearStart" class="range-input range-input-year" min="1960" placeholder="AAAA" />
+            </div>
+          </div>
+          <span class="custom-range-arrow">→</span>
+          <div class="custom-range-field">
+            <label data-i18n="range_to">Au</label>
+            <div class="custom-range-inputs">
+              <input type="number" id="rangeMonthEnd" class="range-input" min="1" max="12" placeholder="MM" />
+              <span class="range-separator">/</span>
+              <input type="number" id="rangeYearEnd" class="range-input range-input-year" min="1960" placeholder="AAAA" />
+            </div>
+          </div>
+          <button class="range-apply-btn" id="rangeApplyBtn" data-i18n="range_apply">Appliquer</button>
+        </div>
+        <div class="custom-range-error" id="rangeError" style="display:none;"></div>
+      </div>
+
+      <!-- CHART -->
+      <div class="chart-container">
+        <div class="chart-loading-overlay" id="chartLoadingOverlay">
+          <div class="chart-loading-spinner"></div>
+          <span data-i18n="loading_data">Chargement des données...</span>
+        </div>
+        <canvas id="priceChart"></canvas>
+      </div>
+
+      <!-- SOURCE BADGE -->
+      <div class="source-badge" id="sourceBadge">
+        📡 Données fournies par <strong>Banque Mondiale</strong> — Dernière mise à jour : <span id="sourceDate">--</span>
+      </div>
+
+      <!-- INDICATORS -->
+      <div class="indicators-row" id="indicators">
+        <div class="indicator-card">
+          <span class="indicator-label" data-i18n="ind_variation">VARIATION SUR LA PÉRIODE</span>
+          <span class="indicator-value" id="indVariation">--</span>
+        </div>
+        <div class="indicator-card">
+          <span class="indicator-label" data-i18n="ind_average">PRIX MOYEN</span>
+          <span class="indicator-value" id="indAverage">--</span>
+        </div>
+        <div class="indicator-card">
+          <span class="indicator-label" data-i18n="ind_high">PLUS HAUT</span>
+          <span class="indicator-value" id="indHigh">--</span>
+        </div>
+        <div class="indicator-card indicator-card-trend">
+          <span class="indicator-label" data-i18n="ind_trend">TENDANCE</span>
+          <span class="indicator-value" id="indTrend">--</span>
+          <div class="trend-tooltip" id="trendTooltip">
+            <span class="trend-tooltip-icon">📐</span>
+            <span data-i18n="trend_tooltip">Calculée par régression linéaire sur l'ensemble de la période. Peut différer du mouvement récent visible sur le graphique.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPORT BUTTON -->
+      <div class="export-row">
+        <button class="export-btn export-open-btn" id="openExportPage" title="Ouvrir la page d'export">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span data-i18n="export_btn">Exporter</span>
+        </button>
+      </div>
+
+      <!-- GEOPOLITICAL CONTEXT -->
+      <div class="geo-panel" id="geoPanel">
+        <div class="geo-header">
+          <h3>🌍 <span data-i18n="geo_title">Contexte géopolitique</span></h3>
+          <span class="geo-subtitle" id="geoSubtitle">Actualités liées au Blé</span>
+        </div>
+        <div class="geo-articles" id="geoArticles">
+          <div class="geo-loading" data-i18n="geo_loading">Chargement des actualités...</div>
+        </div>
+      </div>
+    </section>
+    <!-- ═══════════════════════════════════════ -->
+    <!-- EXPORT PAGE (hidden by default)        -->
+    <!-- ═══════════════════════════════════════ -->
+    <section class="export-page" id="exportPage" style="display:none;">
+      <!-- Back button -->
+      <button class="export-back-btn" id="exportBackBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <span data-i18n="export_back">Retour au tableau de bord</span>
+      </button>
+
+      <h2 class="export-page-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span data-i18n="export_page_title">Centre d'export</span>
+      </h2>
+
+      <!-- ── Step 1: Select commodities ── -->
+      <div class="export-section">
+        <h3 class="export-section-title">
+          <span class="export-step">1</span>
+          <span data-i18n="export_step1_title">Sélectionner les denrées</span>
+        </h3>
+        <div class="export-commodity-selector">
+          <select class="export-commodity-select" id="exportCommoditySelect">
+            <option value="" data-i18n="export_select_placeholder">Choisir une denrée...</option>
+          </select>
+          <button class="export-add-btn" id="exportAddBtn" style="display:none;" data-i18n="customize_add_btn">Ajouter</button>
+        </div>
+        <div class="export-commodity-list" id="exportCommodityList">
+          <div class="export-empty-hint" id="exportEmptyHint" data-i18n="export_empty_hint">Aucune denrée sélectionnée. Ajoutez-en depuis la liste ci-dessus.</div>
+        </div>
+      </div>
+
+      <!-- ── Step 2: Select period ── -->
+      <div class="export-section">
+        <h3 class="export-section-title">
+          <span class="export-step">2</span>
+          <span data-i18n="export_step2_title">Définir la période</span>
+        </h3>
+        <div class="export-range-row">
+          <div class="custom-range-field">
+            <label data-i18n="range_from">Du</label>
+            <div class="custom-range-inputs">
+              <input type="number" id="exportMonthStart" class="range-input" min="1" max="12" placeholder="MM" />
+              <span class="range-separator">/</span>
+              <input type="number" id="exportYearStart" class="range-input range-input-year" min="1960" placeholder="AAAA" />
+            </div>
+          </div>
+          <span class="custom-range-arrow">→</span>
+          <div class="custom-range-field">
+            <label data-i18n="range_to">Au</label>
+            <div class="custom-range-inputs">
+              <input type="number" id="exportMonthEnd" class="range-input" min="1" max="12" placeholder="MM" />
+              <span class="range-separator">/</span>
+              <input type="number" id="exportYearEnd" class="range-input range-input-year" min="1960" placeholder="AAAA" />
+            </div>
+          </div>
+        </div>
+        <div class="custom-range-error" id="exportRangeError" style="display:none;"></div>
+      </div>
+
+      <!-- ── Step 3: Fetch & Export ── -->
+      <div class="export-section">
+        <h3 class="export-section-title">
+          <span class="export-step">3</span>
+          <span data-i18n="export_step3_title">Récupérer et exporter</span>
+        </h3>
+        <button class="export-fetch-btn" id="exportFetchBtn" data-i18n="export_fetch">Vérifier les données</button>
+        <div class="export-fetch-status" id="exportFetchStatus" style="display:none;"></div>
+
+        <!-- Export buttons (hidden until data is fetched) -->
+        <div class="export-actions" id="exportActions" style="display:none;">
+          <button class="export-action-btn export-csv-btn" id="exportCsvBtn">
+            <span>📄</span> CSV
+          </button>
+          <button class="export-action-btn export-md-btn" id="exportMdBtn">
+            <span>📝</span> Markdown
+          </button>
+          <button class="export-action-btn export-json-btn" id="exportJsonBtn">
+            <span>{ }</span> JSON
+          </button>
+        </div>
+
+        <!-- Copy button for Markdown -->
+        <div class="export-copy-row" id="exportCopyRow" style="display:none;">
+          <button class="export-copy-btn" id="exportCopyBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span data-i18n="export_copy">Copier dans le presse-papier</span>
+          </button>
+          <span class="export-copy-ok" id="exportCopyOk" style="display:none;" data-i18n="export_copied">Copié !</span>
+        </div>
+      </div>
+
+      <!-- ── Preview table ── -->
+      <div class="export-preview" id="exportPreview" style="display:none;">
+        <h3 class="export-section-title">
+          <span>👁️</span>
+          <span data-i18n="export_preview_title">Aperçu des données</span>
+          <span class="export-preview-count" id="exportPreviewCount"></span>
+        </h3>
+        <div class="export-table-wrapper">
+          <table class="export-table" id="exportTable">
+            <thead id="exportTableHead"></thead>
+            <tbody id="exportTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- ALERTS PANEL (overlay)                 -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="alerts-overlay" id="alertsOverlay" style="display:none;">
+      <div class="alerts-panel">
+        <div class="alerts-header">
+          <h3>🔔 <span data-i18n="alerts_title">Mes alertes</span></h3>
+          <button class="alerts-close" id="alertsClose">&times;</button>
+        </div>
+
+        <!-- Alert list -->
+        <div class="alerts-list" id="alertsList">
+          <div class="alerts-empty" id="alertsEmpty" data-i18n="alerts_empty">Aucune alerte configurée.</div>
+        </div>
+
+        <!-- Add alert form (hidden by default) -->
+        <div class="alerts-form" id="alertsForm" style="display:none;">
+          <div class="alerts-form-row">
+            <label data-i18n="alerts_commodity">Denrée</label>
+            <select id="alertCommoditySelect" class="alerts-select"></select>
+          </div>
+          <div class="alerts-form-row">
+            <label data-i18n="alerts_type">Type</label>
+            <select id="alertTypeSelect" class="alerts-select">
+              <option value="above" data-i18n="alerts_type_above">Prix dépasse</option>
+              <option value="below" data-i18n="alerts_type_below">Prix descend sous</option>
+              <option value="var_up" data-i18n="alerts_type_var_up">Hausse de plus de</option>
+              <option value="var_down" data-i18n="alerts_type_var_down">Baisse de plus de</option>
+            </select>
+          </div>
+          <div class="alerts-form-row">
+            <label data-i18n="alerts_value">Valeur</label>
+            <div class="alerts-value-input">
+              <input type="number" id="alertValueInput" class="alerts-input" step="0.01" min="0" placeholder="0.00" />
+              <span class="alerts-value-unit" id="alertValueUnit">$</span>
+            </div>
+          </div>
+          <div class="alerts-form-actions">
+            <button class="alerts-save-btn" id="alertSaveBtn" data-i18n="alerts_save">Créer l'alerte</button>
+            <button class="alerts-cancel-btn" id="alertCancelBtn" data-i18n="alerts_cancel">Annuler</button>
+          </div>
+        </div>
+
+        <!-- Add button -->
+        <button class="alerts-add-btn" id="alertsAddBtn">
+          <span>+</span> <span data-i18n="alerts_add">Nouvelle alerte</span>
+        </button>
+        <div class="alerts-max-msg" id="alertsMaxMsg" style="display:none;" data-i18n="alerts_max">Maximum 5 alertes atteint.</div>
+
+        <!-- History -->
+        <div class="alerts-history">
+          <h4>📋 <span data-i18n="alerts_history">Historique</span></h4>
+          <div class="alerts-history-list" id="alertsHistoryList">
+            <div class="alerts-history-empty" data-i18n="alerts_history_empty">Aucune alerte déclenchée.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS -->
+    <div class="toast-container" id="toastContainer"></div>
+
+        <!-- ═══════════════════════════════════════ -->
+    <!-- SOURCES PAGE (hidden by default)       -->
+    <!-- ═══════════════════════════════════════ -->
+    <section class="sources-page" id="sourcesPage" style="display:none;">
+      <!-- Back button -->
+      <button class="export-back-btn" id="sourcesBackBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <span data-i18n="sources_back">Retour au tableau de bord</span>
+      </button>
+
+      <h2 class="sources-page-title">
+        <span>📡</span>
+        <span data-i18n="sources_title">Sources de données &amp; APIs</span>
+      </h2>
+
+      <!-- Intro: What is an API? -->
+      <div class="sources-section sources-intro-section">
+        <h3 class="sources-section-heading">🤔 <span data-i18n="sources_how_title">Comment ça marche ?</span></h3>
+        <p class="sources-text" data-i18n="sources_intro">GrainWatch récupère ses données en temps réel depuis des <strong>APIs</strong>...</p>
+        <p class="sources-text" data-i18n="sources_how_text">Quand vous ouvrez GrainWatch, l'application envoie automatiquement des requêtes...</p>
+        <div class="sources-free-notice" data-i18n="sources_free">🔓 <strong>100% gratuit et transparent</strong> — GrainWatch n'utilise que des APIs publiques et gratuites. Aucune clé d'API dans le code, aucun compte requis.</div>
+      </div>
+
+      <!-- Try it yourself -->
+      <div class="sources-section">
+        <h3 class="sources-section-heading">🚀 <span data-i18n="sources_try_title">Essayez vous-même !</span></h3>
+        <p class="sources-text" data-i18n="sources_try_text">Cliquez sur un bouton ci-dessous...</p>
+
+        <div class="sources-meta-row">
+          <div class="sources-commodity-label">
+            <span data-i18n="sources_commodity">Denrée testée</span> : <strong id="sourcesCommodityName">Blé</strong> <span id="sourcesCommodityIcon">🌾</span>
+          </div>
+          <div class="sources-commodity-label">
+            <span data-i18n="sources_period">Période de l'appel</span> : <strong id="sourcesPeriod">--</strong>
+          </div>
+        </div>
+
+        <div class="sources-btn-row">
+          <button class="sources-api-btn sources-wb-btn" id="sourcesWbBtn">
+            <span data-i18n="sources_btn_wb">🏛️ Appeler l'API Banque Mondiale</span>
+          </button>
+          <button class="sources-api-btn sources-usda-btn" id="sourcesUsdaBtn">
+            <span data-i18n="sources_btn_usda">🇺🇸 Appeler l'API USDA</span>
+          </button>
+          <button class="sources-api-btn sources-gdelt-btn" id="sourcesGdeltBtn">
+            <span data-i18n="sources_btn_gdelt">🌍 Appeler l'API GDELT</span>
+          </button>
+        </div>
+
+        <!-- GDELT description (shown after click) -->
+        <div class="sources-gdelt-desc" id="sourcesGdeltDesc" style="display:none;">
+          <p class="sources-text" data-i18n="sources_gdelt_desc"></p>
+        </div>
+
+        <!-- Loading indicator -->
+        <div class="sources-loading" id="sourcesLoading" style="display:none;">
+          <div class="chart-loading-spinner"></div>
+          <span data-i18n="sources_loading">Appel en cours...</span>
+        </div>
+
+        <!-- JSON output -->
+        <div class="sources-json-wrapper" id="sourcesJsonWrapper" style="display:none;">
+          <div class="sources-json-header">
+            <span data-i18n="sources_json_title">Réponse brute de l'API</span>
+            <span class="sources-json-badge" id="sourcesJsonBadge">JSON</span>
+          </div>
+          <pre class="sources-json-output" id="sourcesJsonOutput"></pre>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER / DISCLAIMER -->
+  <footer class="footer">
+    <p data-i18n="disclaimer">⚠ Cet outil est fourni à titre éducatif uniquement. Il ne constitue en aucun cas un conseil financier ou d'investissement. Les cours affichés proviennent de sources publiques et peuvent présenter un décalage temporel.</p>
+    <div class="footer-version">GrainWatch v0.8.0</div>
+  </footer>
+
+  <script src="js/commodities.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/news.js"></script>
+  <script src="js/alerts.js"></script>
+    <script src="js/sources.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
