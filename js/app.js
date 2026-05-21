@@ -57,7 +57,7 @@ const App = {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        this.state.selectedPeriod = parseInt(btn.dataset.period);
+        this.state.selectedPeriod = parseInt(btn.dataset.period, 10);
         this.state.customRange = null; // exit custom mode
         document.getElementById('customRangePicker').style.display = 'none';
         document.getElementById('customPeriodToggle').classList.remove('active');
@@ -222,10 +222,12 @@ const App = {
   // CUSTOM DATE RANGE VALIDATION & APPLICATION
   // --------------------------------------------------------
   _applyCustomRange() {
-    const mStart = parseInt(document.getElementById('rangeMonthStart').value);
-    const yStart = parseInt(document.getElementById('rangeYearStart').value);
-    const mEnd   = parseInt(document.getElementById('rangeMonthEnd').value);
-    const yEnd   = parseInt(document.getElementById('rangeYearEnd').value);
+    // Radix 10 explicite : défense en profondeur contre toute valeur exotique
+    // ("0x10", "07"…) que pourrait remonter un input altéré.
+    const mStart = parseInt(document.getElementById('rangeMonthStart').value, 10);
+    const yStart = parseInt(document.getElementById('rangeYearStart').value, 10);
+    const mEnd   = parseInt(document.getElementById('rangeMonthEnd').value, 10);
+    const yEnd   = parseInt(document.getElementById('rangeYearEnd').value, 10);
     const errEl  = document.getElementById('rangeError');
 
     // Helper to show error
@@ -405,7 +407,7 @@ const App = {
       this.loadNews(selectedCommodity, I18N.commodityName(commodity));
 
     } catch (error) {
-      console.error("Error loading detail:", error);
+      console.error("Error loading detail:", error.message);
     } finally {
       this.setLoading(false);
     }
@@ -576,30 +578,43 @@ const App = {
     try {
       const saved = localStorage.getItem('grainwatch_favorites');
       if (saved) {
-        this.state.favorites = new Set(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        // Validation : doit être un tableau de strings (IDs de commodities). Cf. CLAUDE.md §7.
+        if (Array.isArray(parsed)) {
+          this.state.favorites = new Set(parsed.filter(id => typeof id === 'string'));
+        }
       }
-    } catch (e) { /* localStorage not available */ }
+    } catch (e) { /* localStorage not available or corrupted */ }
   },
 
   // --------------------------------------------------------
   // COMMODITY CUSTOMIZER
   // --------------------------------------------------------
   loadVisibleCommodities() {
+    // Désérialisation défensive : on filtre les IDs sur le catalogue réel
+    // pour ignorer toute valeur injectée. Cf. CLAUDE.md §7.
     try {
-      // Load user's active list
       const savedActive = localStorage.getItem('grainwatch_active_ids');
       if (savedActive) {
-        this.state.activeCommodityIds = JSON.parse(savedActive);
+        const parsed = JSON.parse(savedActive);
+        if (Array.isArray(parsed)) {
+          this.state.activeCommodityIds = parsed.filter(
+            id => typeof id === 'string' && ALL_COMMODITIES.some(c => c.id === id)
+          );
+        }
       }
-      // Load visibility (checked/unchecked)
       const savedVisible = localStorage.getItem('grainwatch_visible');
       if (savedVisible) {
-        this.state.visibleCommodities = new Set(JSON.parse(savedVisible));
+        const parsed = JSON.parse(savedVisible);
+        if (Array.isArray(parsed)) {
+          this.state.visibleCommodities = new Set(parsed.filter(id => typeof id === 'string'));
+        } else {
+          this.state.visibleCommodities = new Set(this.state.activeCommodityIds);
+        }
       } else {
         this.state.visibleCommodities = new Set(this.state.activeCommodityIds);
       }
-    } catch (e) {}
-    // Rebuild COMMODITIES from active IDs
+    } catch (e) { /* localStorage not available or corrupted */ }
     this._rebuildCommodities();
   },
 
@@ -921,7 +936,10 @@ const App = {
   // THEME (dark/light mode)
   // --------------------------------------------------------
   _initTheme() {
-    const saved = localStorage.getItem('grainwatch_theme');
+    // Whitelist stricte : data-theme ne doit jamais recevoir une valeur arbitraire
+    // depuis localStorage (cohérent avec i18n.js qui valide déjà 'fr'/'en'). Cf. CLAUDE.md §7.
+    const rawSaved = localStorage.getItem('grainwatch_theme');
+    const saved = (rawSaved === 'dark' || rawSaved === 'light') ? rawSaved : null;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     if (saved) {
@@ -946,7 +964,11 @@ const App = {
 
     // Listen for OS theme changes
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-      if (!localStorage.getItem('grainwatch_theme')) {
+      // Cohérent avec la whitelist plus haut : un localStorage invalide est ignoré
+      // et l'OS reste maître.
+      const raw = localStorage.getItem('grainwatch_theme');
+      const hasManualChoice = raw === 'dark' || raw === 'light';
+      if (!hasManualChoice) {
         document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
         this._updateThemeIcon();
         if (this.state.selectedCommodity) this.loadDetail();

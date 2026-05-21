@@ -4,7 +4,7 @@
 
 **GrainWatch** est une application web mono-page (SPA) de suivi en temps réel des prix des matières premières agricoles. Déployée sur GitHub Pages, elle ne nécessite aucun backend et consomme exclusivement des APIs publiques gratuites.
 
-- **Version actuelle** : 0.8.0 (7 mai 2026)
+- **Version actuelle** : 0.8.1 (21 mai 2026)
 - **URL de production** : https://lianazel.github.io/grainwatch/
 - **Stack** : Vanilla JS / HTML5 / CSS3 / Chart.js — GitHub Pages (statique pur)
 - **Codebase** : ~3 500 lignes de code, 10 modules JS
@@ -51,7 +51,7 @@ GrainWatch/
 
 **Contrainte CORS** : les APIs Banque Mondiale et USDA sont bloquées par CORS depuis un navigateur. La page Sources affiche actuellement des données d'exemple avec l'URL réelle copiable pour test manuel. Ne jamais contourner avec un proxy non audité.
 
-### Fonctionnalités implémentées (v0.8.0)
+### Fonctionnalités implémentées (v0.8.1)
 - Affichage des cours avec Chart.js (gradients adaptatifs dark/light)
 - Mode sombre/clair : détection OS automatique + toggle manuel + persistance localStorage
 - Alertes de prix : création, historique cliquable, détection de doublons, pré-remplissage
@@ -193,6 +193,7 @@ Une page /privacy minimaliste doit être créée et liée dans le footer.
 
 | Version | Date       | Nouveautés principales                                           |
 |---------|------------|------------------------------------------------------------------|
+| 0.8.1   | 21/05/2026 | Security hardening : XSS GDELT, meta CSP, SRI CDN, innerHTML §5 (historique alertes, source badge), validation inputs alertes (whitelist type + bornes), désérialisation localStorage défensive (alerts/favorites/visible/theme), radix 10 parseInt, filtrage console.* (.message uniquement) |
 | 0.8.0   | 07/05/2026 | Mode sombre, alertes améliorées (historique, doublons), fix mobile |
 | 0.7.x   | antérieur  | Structure de base, graphiques, alertes V1                        |
 
@@ -220,6 +221,35 @@ Une page /privacy minimaliste doit être créée et liée dans le footer.
 - [x] **XSS sources.js** — ligne 205 : `error.message` rendu via `textContent` au lieu de `innerHTML` (créa span + appendChild)
 - [x] **XSS GDELT domain** — `js/news.js:135` : `${a.domain}` passé via `_escapeHtml()` (même classe de bug que l'URL)
 
+### Fait — Sécurité §6 — Validation inputs alertes (21/05/2026)
+- [x] **Validation `_createAlert()`** — `js/alerts.js:161-172` : ajout (1) whitelist du `type` parmi `['above','below','var_up','var_down']`, (2) vérification que `commodityId` existe dans `ALL_COMMODITIES` (évite IDs forgés via DOM altéré ou extension), (3) borne haute `value <= 1_000_000` (cf. CLAUDE.md §6 — anti-overflow et anti-DoS sur le rendu). La validation existante (`!commodityId`, `isNaN`, `value <= 0`) est conservée.
+
+### Fait — Sécurité §7 — Désérialisation localStorage défensive (21/05/2026)
+- [x] **`alerts.js:_load()`** — refactor complet. `_alerts` filtré par `Array.isArray` + validation par item (`id`/`commodityId` strings, `type` whitelisté, `value` number fini dans `]0, 1_000_000]`). `_history` filtré par `Array.isArray` + validation `text`/`time` strings, slice(-50) pour borne dure. En cas de `JSON.parse` qui throw, fallback sur tableau vide explicite.
+- [x] **`app.js:loadFavorites()`** — validation `Array.isArray` + filtre `typeof id === 'string'` avant `new Set(...)`. Évite qu'un JSON `{}` ou un objet non-array fasse exploser `Set` ou injecte des entrées non-string.
+- [x] **`app.js:loadVisibleCommodities()`** — validation `Array.isArray` sur `grainwatch_active_ids` et `grainwatch_visible`. Bonus défense en profondeur : `activeCommodityIds` filtré contre `ALL_COMMODITIES` (un ID inconnu est silencieusement ignoré).
+- [x] **`app.js:_initTheme()`** — whitelist stricte `'dark'|'light'` sur `grainwatch_theme` à la lecture initiale ET dans le listener `matchMedia` (sinon `data-theme="foo"` aurait été accepté tel quel — non exploitable XSS mais incohérent avec la politique de validation).
+- _Volontairement non touché_ : `i18n.js:20` déjà conforme (`=== "en" || === "fr"` à la lecture).
+
+### Fait — Sécurité §6 — Radix 10 sur tous les parseInt (21/05/2026)
+Défense en profondeur (pas d'exploit connu sur `<input type="number">`, mais aligne sur la politique "validation stricte des conversions") :
+- [x] **`app.js:_applyCustomRange()`** — 4 `parseInt` sur les inputs date custom passés à radix 10.
+- [x] **`export.js:_validateDates()`** — 4 `parseInt` sur les inputs date custom passés à radix 10.
+- [x] **`app.js:60`** — `parseInt(btn.dataset.period, 10)` (dataset interne mais cohérence).
+- [x] **`alerts.js:409`** — `parseInt(el.dataset.histIdx, 10)` (idem).
+- _Note_ : `parseFloat` n'a pas de notion de radix — `alerts.js:186` reste tel quel (déjà entouré de bornes 0 < x ≤ 1_000_000).
+
+- [x] **Synchro `site/`** (21/05/2026 — 2e batch) — `js/alerts.js`, `js/app.js`, `js/export.js` recopiés dans `site/js/`.
+
+### Fait — Sécurité — console.* en prod (21/05/2026)
+Audit complet : 10 occurrences de `console.warn/error` dans `api.js`, `app.js`, `export.js`, `news.js`. **Aucune** ne loggue de données personnelles, clé API, valeur d'alerte, prix ou input utilisateur. Le seul risque réel : 5 d'entre elles loggaient l'objet `Error` entier (stack + URL fetch potentielle visibles dans DevTools).
+- [x] **`api.js:116, 346`** — `console.warn(..., e)` → `console.warn(..., e.message)` (loadAll standard + custom range).
+- [x] **`export.js:323`** — `console.error('Export fetch error:', error)` → `error.message`.
+- [x] **`export.js:590`** — `console.error('Clipboard copy failed:', err)` → `err.message`.
+- [x] **`app.js:410`** — `console.error("Error loading detail:", error)` → `error.message`.
+- _Inchangés_ : les 5 autres (`api.js:228/289/453/509`, `news.js:99`) loggaient déjà `error.message` uniquement.
+- [x] **Synchro `site/`** (3e batch) — `js/api.js`, `js/app.js`, `js/export.js` recopiés.
+
 ### Fait — Sécurité MOYEN §5 — innerHTML avec interpolation (21/05/2026)
 Audit complet des 17 `innerHTML` dans `app.js`, `alerts.js`, `export.js` :
 - [x] **XSS historique alertes** — `js/alerts.js:333` : `h.text`/`h.time`/`h.commodityId` proviennent de `localStorage` (altérable par extension malveillante). Refactor complet en `createElement` + `textContent`. L327 (état vide) refactorisé par cohérence.
@@ -229,13 +259,12 @@ Audit complet des 17 `innerHTML` dans `app.js`, `alerts.js`, `export.js` :
 - [x] **Synchro `site/`** — `index.html`, `js/news.js`, `js/sources.js`, `js/app.js`, `js/alerts.js` recopiés dans `site/` (déploiement GitHub Pages prêt)
 
 ### A faire — Sécurité (prioritaire)
-- [ ] Audit complet : rechercher tous les `innerHTML` avec données API
-- [ ] Audit complet : vérifier la meta CSP dans index.html
-- [ ] Audit complet : vérifier les attributs SRI sur les scripts CDN
-- [ ] Audit complet : vérifier la validation des inputs utilisateur
-- [ ] Audit complet : vérifier les données localStorage et leur désérialisation
-- [ ] Audit complet : rechercher les `console.log` sensibles
-- [ ] Corriger toutes les failles identifiées
+- [x] Audit complet : rechercher tous les `innerHTML` avec données API _(fait — §5 du 21/05)_
+- [x] Audit complet : vérifier la meta CSP dans index.html _(fait — corrections critiques du 21/05)_
+- [x] Audit complet : vérifier les attributs SRI sur les scripts CDN _(fait — corrections critiques du 21/05)_
+- [x] Audit complet : vérifier la validation des inputs utilisateur _(fait — §6 du 21/05)_
+- [x] Audit complet : vérifier les données localStorage et leur désérialisation _(fait — §7 du 21/05)_
+- [x] Audit complet : rechercher les `console.log` sensibles _(fait — 21/05, aucun log sensible, 5 objets Error filtrés en .message)_
 - [ ] Vérification finale avec la checklist release
 - [ ] Vérifier securityheaders.com pour l'URL de production
 

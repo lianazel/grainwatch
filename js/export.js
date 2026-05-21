@@ -219,10 +219,11 @@ const ExportPage = {
   // DATE VALIDATION (same rules as App._applyCustomRange)
   // --------------------------------------------------------
   _validateDates() {
-    const mStart = parseInt(document.getElementById('exportMonthStart').value);
-    const yStart = parseInt(document.getElementById('exportYearStart').value);
-    const mEnd   = parseInt(document.getElementById('exportMonthEnd').value);
-    const yEnd   = parseInt(document.getElementById('exportYearEnd').value);
+    // Radix 10 explicite : défense en profondeur (cohérent avec app.js:_applyCustomRange).
+    const mStart = parseInt(document.getElementById('exportMonthStart').value, 10);
+    const yStart = parseInt(document.getElementById('exportYearStart').value, 10);
+    const mEnd   = parseInt(document.getElementById('exportMonthEnd').value, 10);
+    const yEnd   = parseInt(document.getElementById('exportYearEnd').value, 10);
     const errEl  = document.getElementById('exportRangeError');
 
     const showError = (msg) => {
@@ -319,7 +320,7 @@ const ExportPage = {
         this._renderPreview();
       }
     } catch (error) {
-      console.error('Export fetch error:', error);
+      console.error('Export fetch error:', error.message);
       this._showFetchStatus(I18N.t('export_fetch_error'), 'error');
     } finally {
       fetchBtn.classList.remove('loading');
@@ -586,7 +587,7 @@ const ExportPage = {
       okEl.style.display = 'inline';
       setTimeout(() => { okEl.style.display = 'none'; }, 2000);
     } catch (err) {
-      console.error('Clipboard copy failed:', err);
+      console.error('Clipboard copy failed:', err.message);
     }
   },
 

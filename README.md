@@ -188,6 +188,7 @@ Les idées et les PR sont les bienvenues. Quelques pistes d'évolution dans l'or
 
 | Version | Date | Contenu |
 |---------|------|---------|
+| **v0.8.1** | Mai 2026 | Security hardening : XSS GDELT, meta CSP, SRI sur CDN, durcissement innerHTML, validation inputs alertes (whitelist type + bornes), désérialisation localStorage défensive, filtrage console.* |
 | **v0.8.0** | Mai 2026 | Mode sombre (auto OS + toggle), alertes améliorées (historique cliquable, doublon), fix iOS |
 | **v0.7.1** | Mai 2026 | Fix responsive mobile (header 2 lignes, bouton Appliquer tactile, géo panel visible) |
 | **v0.7.0** | Mai 2026 | Système d'alertes (seuil + variation), notifications toast, historique, doc technique |

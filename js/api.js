@@ -113,7 +113,7 @@ const GrainWatchAPI = {
           });
         }
       } catch (e) {
-        console.warn(`Failed to load ${commodity.id}:`, e);
+        console.warn(`Failed to load ${commodity.id}:`, e.message);
       }
     }
     return results;
@@ -343,7 +343,7 @@ const GrainWatchAPI = {
           });
         }
       } catch (e) {
-        console.warn(`Failed to load ${commodity.id}:`, e);
+        console.warn(`Failed to load ${commodity.id}:`, e.message);
       }
     }
     return results;

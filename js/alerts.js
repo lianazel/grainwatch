@@ -22,12 +22,39 @@ const AlertsManager = {
   // PERSISTENCE (localStorage)
   // --------------------------------------------------------
   _load() {
+    // Désérialisation défensive : si le localStorage est corrompu ou altéré
+    // (extension malveillante, devtools), on ignore et on garde les valeurs
+    // par défaut (tableaux vides). Jamais de crash. Cf. CLAUDE.md §7.
     try {
       const saved = localStorage.getItem('grainwatch_alerts');
-      if (saved) this._alerts = JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const ALLOWED_TYPES = ['above', 'below', 'var_up', 'var_down'];
+          this._alerts = parsed.filter(a =>
+            a && typeof a === 'object'
+            && typeof a.id === 'string'
+            && typeof a.commodityId === 'string'
+            && ALLOWED_TYPES.includes(a.type)
+            && typeof a.value === 'number' && isFinite(a.value)
+            && a.value > 0 && a.value <= 1_000_000
+          );
+        }
+      }
+    } catch (e) { this._alerts = []; }
+    try {
       const hist = localStorage.getItem('grainwatch_alerts_history');
-      if (hist) this._history = JSON.parse(hist);
-    } catch (e) {}
+      if (hist) {
+        const parsed = JSON.parse(hist);
+        if (Array.isArray(parsed)) {
+          this._history = parsed
+            .filter(h => h && typeof h === 'object'
+              && typeof h.text === 'string'
+              && typeof h.time === 'string')
+            .slice(-50); // borne dure : 50 max (cohérent avec checkAlerts L470)
+        }
+      }
+    } catch (e) { this._history = []; }
   },
 
   _save() {
@@ -158,7 +185,15 @@ const AlertsManager = {
     const type = document.getElementById('alertTypeSelect').value;
     const value = parseFloat(document.getElementById('alertValueInput').value);
 
-    if (!commodityId || isNaN(value) || value <= 0) return;
+    // Whitelist du type d'alerte (évite injection via DOM altéré)
+    const ALLOWED_TYPES = ['above', 'below', 'var_up', 'var_down'];
+    if (!ALLOWED_TYPES.includes(type)) return;
+
+    // commodityId doit exister dans le catalogue (évite IDs forgés)
+    if (!commodityId || !ALL_COMMODITIES.some(c => c.id === commodityId)) return;
+
+    // Valeur : > 0 et <= 1 000 000 (cf. CLAUDE.md §6 alertes — borne anti-overflow)
+    if (isNaN(value) || value <= 0 || value > 1_000_000) return;
 
     // Check for existing alert on same commodity
     const existing = this._alerts.find(a => a.commodityId === commodityId);
@@ -371,7 +406,7 @@ const AlertsManager = {
     // Bind click on reusable history items
     list.querySelectorAll('.alert-history-reusable').forEach(el => {
       el.addEventListener('click', () => {
-        const idx = parseInt(el.dataset.histIdx);
+        const idx = parseInt(el.dataset.histIdx, 10);
         const h = this._history[idx];
         if (h && h.commodityId) this._prefillFromHistory(h);
       });
