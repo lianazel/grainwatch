@@ -5,8 +5,9 @@
 **GrainWatch** est une application web mono-page (SPA) de suivi en temps réel des prix des matières premières agricoles. Déployée sur GitHub Pages, elle ne nécessite aucun backend et consomme exclusivement des APIs publiques gratuites.
 
 - **Version actuelle** : 0.8.1 (21 mai 2026)
-- **URL de production** : https://lianazel.github.io/grainwatch/
-- **Stack** : Vanilla JS / HTML5 / CSS3 / Chart.js — GitHub Pages (statique pur)
+- **URL de production** : https://grainwatch.vercel.app/ (déploiement actuel via Vercel)
+- **Stack** : Vanilla JS / HTML5 / CSS3 / Chart.js — Hébergement statique pur
+- **Hébergement** : Vercel en production. Le sous-dossier `site/` est conservé pour un déploiement GitHub Pages alternatif (cf. `DEPLOY_GITHUB.md`).
 - **Codebase** : ~3 500 lignes de code, 10 modules JS
 - **Auteur** : lianazel
 - Aucun backend, aucun compte utilisateur, aucune clé API dans le code
@@ -60,14 +61,18 @@ GrainWatch/
 - Déploiement GitHub Pages via site/
 
 ### Persistance localStorage
-| Clé                    | Type     | Usage                         |
-|------------------------|----------|-------------------------------|
-| `grainwatch_theme`     | string   | "dark" ou "light"             |
-| `grainwatch_favorites` | array    | Liste de slugs des favoris    |
-| `grainwatch_alerts`    | array    | Alertes configurées           |
-| `grainwatch_lang`      | string   | "fr" ou "en"                  |
+| Clé                          | Type     | Usage                                                  |
+|------------------------------|----------|--------------------------------------------------------|
+| `grainwatch_theme`           | string   | "dark" ou "light"                                      |
+| `grainwatch_lang`            | string   | "fr" ou "en"                                           |
+| `grainwatch_favorites`       | array    | Liste de slugs des favoris (`commodityId`)             |
+| `grainwatch_alerts`          | array    | Alertes configurées (id, commodityId, type, value)     |
+| `grainwatch_alerts_history`  | array    | Historique des alertes déclenchées (max 50, troncature dure côté `alerts.js`) |
+| `grainwatch_active_ids`      | array    | IDs des denrées actives dans la sidebar (filtrés contre `ALL_COMMODITIES`) |
+| `grainwatch_visible`         | array    | IDs des denrées cochées/visibles dans le graphique     |
 
 Aucune autre donnée ne doit être stockée. Jamais de données personnelles, IP, ou fingerprint.
+Toutes ces clés sont des préférences UI strictement locales — aucune n'est transmise par le réseau.
 
 ---
 
@@ -258,6 +263,58 @@ Audit complet des 17 `innerHTML` dans `app.js`, `alerts.js`, `export.js` :
 
 - [x] **Synchro `site/`** — `index.html`, `js/news.js`, `js/sources.js`, `js/app.js`, `js/alerts.js` recopiés dans `site/` (déploiement GitHub Pages prêt)
 
+### Fait — Checklist release — Vérification finale (21/05/2026)
+Parcours systématique des 9 items de la checklist `Security Hardening Policy`. Aucune régression détectée.
+
+| # | Item checklist | Statut | Détail |
+|---|---|---|---|
+| 1 | Aucune clé API/token/secret dans code/commits | ✅ | `grep -rEn "(api[_-]?key|token|secret|password|bearer)"` → 0 hit légitime |
+| 2 | `innerHTML` avec données externes : zéro occurrence | ✅ | Audit des 19 `innerHTML` restants : tous interpolent uniquement i18n bundlé, `ALL_COMMODITIES` (catalogue statique), ou nombres calculés. `sources.js:196` (`_colorizeJSON`) échappe `&<>` avant le regex highlighting. `export.js:404` (`r.date`) est safe : les dates sont reconstruites via `toISOString().split('T')[0]` dans `api.js:214,439`, jamais raw API. `app.js:855` (`el.innerHTML = text`) interpole `I18N.t(key)` → bundle statique. |
+| 3 | Meta CSP présente et à jour dans `index.html` | ✅ | Lignes 6-15. `default-src 'self'`, script/style/connect/font/img whitelistés, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`. |
+| 4 | SRI sur toutes les dépendances CDN | ✅ | Chart.js 4.4.7 et chartjs-adapter-date-fns 3.0.0 : `integrity="sha384-..."` + `crossorigin="anonymous"` (`index.html:21-26`). |
+| 5 | Inputs utilisateur validés et bornés | ✅ | Cf. §6 du 21/05 : whitelist type, validation `commodityId ∈ ALL_COMMODITIES`, borne haute `value ≤ 1_000_000`. |
+| 6 | localStorage : uniquement les clés documentées | ⚠️→✅ | Écart constaté : 7 clés réellement utilisées vs 4 documentées. Toutes légitimes (préférences UI). Tableau "Persistance localStorage" mis à jour ce jour pour refléter la réalité (`grainwatch_alerts_history`, `grainwatch_active_ids`, `grainwatch_visible` ajoutées). |
+| 7 | Désérialisation localStorage protégée par try/catch | ✅ | Cf. §7 du 21/05 : `alerts.js:_load()`, `app.js:loadFavorites/loadVisibleCommodities/_initTheme`, `i18n.js:20`. |
+| 8 | Pas de `console.log` contenant des données utilisateur en prod | ✅ | 10 `console.warn/error` audités, aucun ne loggue prix/alerte/input utilisateur. 5 objets `Error` entiers filtrés en `.message` le 21/05. |
+| 9 | Vérifier securityheaders.com pour l'URL de production | ✅ | Voir section ci-dessous. |
+
+### Fait — Vérification securityheaders.com / headers HTTP prod (21/05/2026)
+URL prod réelle : **https://grainwatch.vercel.app/** (hébergement Vercel, et non GitHub Pages comme initialement supposé dans CLAUDE.md — corrigé).
+securityheaders.com refuse les requêtes automatisées (403). Audit fait directement via `curl -sIL` sur l'URL prod.
+
+**Headers présents :**
+- ✅ `strict-transport-security: max-age=63072000; includeSubDomains; preload` (HSTS très fort — 2 ans + preload)
+- ✅ `Content-Security-Policy` délivrée via `<meta>` HTML (vérifié dans la réponse).
+
+**Headers manquants** (cause attendue : pas de `vercel.json` dans le repo) :
+- ❌ `X-Content-Type-Options: nosniff`
+- ❌ `Referrer-Policy: strict-origin-when-cross-origin` (ou `no-referrer`)
+- ❌ `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- ❌ `X-Frame-Options: DENY` (redondant avec CSP `frame-ancestors 'none'` mais attendu par les scanners)
+- ❌ `Cross-Origin-Opener-Policy: same-origin`
+- ❌ CSP en **header HTTP** (uniquement présente en `<meta>` aujourd'hui — perte de points scoring)
+
+**Scoring estimé sans correction : B**. Pour atteindre A/A+ → ajout d'un `vercel.json` (nouvelle tâche enregistrée ci-dessous). À noter : GitHub Pages ne supportant pas les headers HTTP custom, la meta CSP reste indispensable pour le fallback `site/`.
+
+**Recommandation `vercel.json` minimal** :
+```json
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" }
+      ]
+    }
+  ]
+}
+```
+La CSP en header peut être migrée dans un second temps (mêmes directives que la meta — copier-coller depuis `index.html:7-15`).
+
 ### A faire — Sécurité (prioritaire)
 - [x] Audit complet : rechercher tous les `innerHTML` avec données API _(fait — §5 du 21/05)_
 - [x] Audit complet : vérifier la meta CSP dans index.html _(fait — corrections critiques du 21/05)_
@@ -265,8 +322,20 @@ Audit complet des 17 `innerHTML` dans `app.js`, `alerts.js`, `export.js` :
 - [x] Audit complet : vérifier la validation des inputs utilisateur _(fait — §6 du 21/05)_
 - [x] Audit complet : vérifier les données localStorage et leur désérialisation _(fait — §7 du 21/05)_
 - [x] Audit complet : rechercher les `console.log` sensibles _(fait — 21/05, aucun log sensible, 5 objets Error filtrés en .message)_
-- [ ] Vérification finale avec la checklist release
-- [ ] Vérifier securityheaders.com pour l'URL de production
+- [x] Vérification finale avec la checklist release _(fait — 21/05, voir section "Checklist release — Vérification finale" ci-dessous)_
+- [x] Vérifier securityheaders.com pour l'URL de production _(fait — 21/05, voir section ci-dessous ; recommandation : ajouter `vercel.json` avec les headers manquants)_
+
+### Fait — Sécurité — `vercel.json` (21/05/2026)
+- [x] **`vercel.json` créé à la racine du projet.** Contient 6 directives sur `source: "/(.*)"` (matche toutes les routes statiques SPA) :
+  - `Content-Security-Policy` — mêmes directives que la meta `index.html:7-15` (default-src 'self', script/connect/style/font/img whitelistés, base-uri/form-action self, frame-ancestors none). La meta dans le HTML est **conservée** pour le fallback GitHub Pages (`site/`).
+  - `X-Content-Type-Options: nosniff` — bloque le MIME sniffing.
+  - `Referrer-Policy: strict-origin-when-cross-origin` — limite la fuite de Referer cross-origin.
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(), usb=()` — désactive explicitement les APIs sensibles non utilisées par GrainWatch + opt-out FLoC/cohortes.
+  - `X-Frame-Options: DENY` — redondant avec `frame-ancestors 'none'` mais attendu par les scanners.
+  - `Cross-Origin-Opener-Policy: same-origin` — isole le contexte de navigation.
+- **Note déploiement** : à pousser sur main, Vercel applique automatiquement les headers au prochain build (~30s). Vérifier après déploiement : `curl -sI https://grainwatch.vercel.app/ | grep -iE "csp|x-content|referrer|permissions|x-frame|coop"`.
+- **Note GH Pages** : `vercel.json` est ignoré sur GitHub Pages — c'est attendu, la meta CSP suffit pour ce fallback.
+- **Scoring attendu** après déploiement : **A+** sur securityheaders.com (HSTS fort déjà présent + tous les headers manquants ajoutés + CSP en header HTTP).
 
 ### A faire — Conformité
 - [ ] Implémenter une page /privacy minimaliste et la lier dans le footer
