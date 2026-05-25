@@ -337,6 +337,22 @@ La CSP en header peut être migrée dans un second temps (mêmes directives que 
 - **Note GH Pages** : `vercel.json` est ignoré sur GitHub Pages — c'est attendu, la meta CSP suffit pour ce fallback.
 - **Scoring attendu** après déploiement : **A+** sur securityheaders.com (HSTS fort déjà présent + tous les headers manquants ajoutés + CSP en header HTTP).
 
+### Fait — Inter-app — Lien GrainWatch → GrainTrack3D (25/05/2026)
+- [x] **Icône globe 3D dans `.detail-price-row`** (`index.html`) — SVG inline 28×28, juste avant `#detailPrice`. Attributs sécurité : `target="_blank"` + `rel="noopener noreferrer"` (anti tab hijacking). `display: none` par défaut.
+- [x] **Constante de config + builder d'URL** (`js/app.js`, en-tête) — `GRAINTRACK3D_BASE_URL = 'https://grain-track3-d.vercel.app'`, `GRAINTRACK3D_PARAM_NAME = 'grain'`, `GRAINTRACK3D_SUPPORTED_KEYS` (Set des 12 céréales acceptées côté GrainTrack3D). `buildGrainTrack3DUrl()` valide le type, normalise lowercase, vérifie l'appartenance au Set, construit l'URL via `new URL()` + `searchParams.set()` (zéro concaténation, encodage auto).
+- [x] **Branchement dans `loadDetail()`** (`js/app.js`) — après mise à jour du `#detailCode`. Affiche/masque l'icône selon que `buildGrainTrack3DUrl(selectedCommodity)` retourne une URL ou `null`. Les 14 denrées non-céréalières (café, cacao, coton, palm oil, sunflower, soybean_oil, rubber, tea, orange, banana, olive_oil, coconut_oil, wool, tobacco) → icône cachée. Tooltip rafraîchi via `I18N.t('graintrack3d_tooltip')` à chaque changement de langue (ligne 218 → `loadDetail()`).
+- [x] **CSS dédié** (`css/style.css`, fin du fichier) — `.graintrack3d-link` utilise `var(--terracotta)` qui bascule auto en dark mode (cf. `[data-theme="dark"]` ligne 35-36). Hover scale + background terracotta 12%, focus-visible outline 2px, active scale down.
+- [x] **i18n** (`js/i18n.js`) — clé `graintrack3d_tooltip` ajoutée FR/EN.
+- [x] **Synchro `site/`** — `index.html`, `css/style.css`, `js/i18n.js`, `js/app.js` recopiés.
+- **Test manuel à faire après déploiement** :
+  - Ouvrir https://grainwatch.vercel.app/ → sélectionner "Blé" → icône globe visible à gauche du prix → clic ouvre https://grain-track3-d.vercel.app/?grain=wheat dans un nouvel onglet → GrainTrack3D doit pré-sélectionner le blé dans son GrainSelector
+  - Sélectionner "Café" → icône cachée (denrée non supportée par GrainTrack3D)
+  - Basculer FR↔EN → tooltip mis à jour
+  - Mode sombre → couleur de l'icône bascule en `--terracotta` dark (#E07B5A)
+- **Format paramètre URL vérifié Phase 0** : GrainTrack3D `src/App.jsx:30-36` lit `URLSearchParams.get('grain')` puis valide via `GRAIN_LIST.some(g => g.key === grainParam)` — keys lowercase (`wheat`, `corn`, `rice`, `soybean`, `sugar`, `barley`, `oats`, `sorghum`, `rapeseed`, `groundnut`, `lentils`, `millet`). GrainWatch utilise déjà ces mêmes IDs lowercase → aucune transformation requise, juste un filtre de whitelist.
+- **CSP** : pas de modification nécessaire. La meta CSP couvre fetch/connect/script, mais une navigation `<a target="_blank">` ouvre un nouveau contexte de navigation non couvert par `connect-src`/`default-src` (et la directive `navigate-to` n'est pas définie). Vérifié OK.
+- Rapport détaillé : `tasks/RAPPORT_LINK_GRAINTRACK3D_v1.md`.
+
 ### A faire — Conformité
 - [ ] Implémenter une page /privacy minimaliste et la lier dans le footer
 
@@ -357,9 +373,38 @@ La CSP en header peut être migrée dans un second temps (mêmes directives que 
 1. Copier les fichiers source dans le sous-dossier `site/`
 2. `git add . && git commit -m "description" && git push`
 3. GitHub Pages se met à jour automatiquement (~30 secondes)
-4. Vérifier https://lianazel.github.io/grainwatch/
+4. Vérifier https://grainwatch.vercel.app/
 
 ---
+## Roadmap fonctionnelle — Prochaines étapes
+v0.9 — Page Géopolitique dédiée + Navigation
+1. Fix actualités géopolitiques (GDELT)
+Le panneau "Actualités géopolitiques" ne charge jamais de données.
+Cause probable : l'appel à l'API GDELT ne filtre pas sur la céréale sélectionnée (ex. "wheat", "corn").
+→ Passer le slug de la céréale en cours comme terme de recherche GDELT.
+2. Page géopolitique dédiée
+Déplacer le contenu géopolitique dans une page/vue dédiée (pas juste un panneau dans le dashboard).
+Cette page contiendra un sélecteur de contexte avec deux modes :
+
+Céréale en cours : filtre GDELT sur la denrée actuellement analysée
+Toutes les denrées : aucun filtre sur le code céréale — vue globale
+
+3. Menu hamburger
+Remplacer les boutons et liens dispersés dans l'application par un menu hamburger centralisé.
+Objectif : navigation propre et scalable à mesure que de nouvelles pages/fonctionnalités s'ajoutent.
+4. vercel.json — Headers de sécurité
+Quick win : ajouter un vercel.json avec les headers manquants identifiés lors de l'audit (X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy) pour viser un score A+ sur securityheaders.com.
+
+---
+
+ ## Organisation de l'équipe
+
+JC : chef de projet, guide le développement, fournit les idées et la vision produit
+Cowork (Claude Opus) : rédige les prompts techniques ultra-précis pour Claude Code, conseille sur l'architecture et la sécurité
+Claude Code : ingénieur d'exécution, implémente les modifications dans le code
+
+---
+
 
 ## Instructions pour Claude Code
 

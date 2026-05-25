@@ -2,6 +2,36 @@
 // GRAINWATCH — Main Application Controller
 // ============================================================
 
+// ── GrainTrack3D — Configuration inter-app ──────────────────
+// Lien vers l'app sœur de l'écosystème CargoSphere (suivi 3D des
+// vraquiers céréaliers). Paramètre URL attendu côté GrainTrack3D :
+// ?grain=<key>  où key est l'une des 12 céréales suivies
+// (cf. src/data/grainList.js du repo GrainTrack3D — validé contre
+//  GRAIN_LIST.some(g => g.key === grainParam) dans App.jsx).
+const GRAINTRACK3D_BASE_URL = 'https://grain-track3-d.vercel.app';
+const GRAINTRACK3D_PARAM_NAME = 'grain';
+const GRAINTRACK3D_SUPPORTED_KEYS = new Set([
+  'wheat', 'corn', 'rice', 'soybean', 'sugar', 'barley',
+  'oats', 'sorghum', 'rapeseed', 'groundnut', 'lentils', 'millet'
+]);
+
+/**
+ * Construit l'URL GrainTrack3D pré-filtrée pour une denrée donnée.
+ * Retourne null si la denrée n'est pas supportée par GrainTrack3D
+ * (ex: café, cacao, coton — pas de ports vraquiers céréaliers).
+ * @param {string} commodityId — id de la denrée (ex: 'wheat')
+ * @returns {string|null}
+ */
+function buildGrainTrack3DUrl(commodityId) {
+  if (!commodityId || typeof commodityId !== 'string') return null;
+  const key = commodityId.trim().toLowerCase();
+  if (!GRAINTRACK3D_SUPPORTED_KEYS.has(key)) return null;
+  // URL() + searchParams.set() : encodage automatique, pas de concaténation.
+  const url = new URL(GRAINTRACK3D_BASE_URL);
+  url.searchParams.set(GRAINTRACK3D_PARAM_NAME, key);
+  return url.toString();
+}
+
 const App = {
   state: {
     selectedCommodity: "wheat",
@@ -352,6 +382,21 @@ const App = {
       document.getElementById('detailName').textContent = I18N.commodityName(commodity);
       document.getElementById('detailCode').textContent = commodity.code;
       document.getElementById('detailPrice').textContent = symbol + this.formatNumber(currentPrice);
+
+      // ── Lien GrainTrack3D : visible uniquement pour les denrées supportées
+      //    par l'app sœur (12 céréales/oléagineux trackées via AIS).
+      const gt3dLink = document.getElementById('graintrack3d-link');
+      if (gt3dLink) {
+        const gt3dUrl = buildGrainTrack3DUrl(selectedCommodity);
+        if (gt3dUrl) {
+          gt3dLink.href = gt3dUrl;
+          gt3dLink.title = I18N.t('graintrack3d_tooltip');
+          gt3dLink.style.display = 'inline-flex';
+        } else {
+          gt3dLink.style.display = 'none';
+          gt3dLink.href = '#';
+        }
+      }
 
       // Show unit based on source, adapting currency symbol
       let unitText;

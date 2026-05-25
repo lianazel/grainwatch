@@ -3645,4 +3645,45 @@ body {
   .toast {
     max-width: 100%;
   }
+
+/* ============================================================
+   GrainTrack3D — Icône de lien inter-app (header détail denrée)
+   La couleur var(--terracotta) bascule automatiquement en dark mode
+   (cf. déclarations [data-theme="dark"] en haut du fichier).
+   ============================================================ */
+.graintrack3d-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  margin-right: 4px;
+  border-radius: 50%;
+  color: var(--terracotta);
+  background: transparent;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  align-self: center;
+}
+
+.graintrack3d-link:hover {
+  background-color: rgba(192, 57, 43, 0.12);
+  color: var(--terracotta-light);
+  transform: scale(1.1);
+}
+
+.graintrack3d-link:focus-visible {
+  outline: 2px solid var(--terracotta);
+  outline-offset: 2px;
+}
+
+.graintrack3d-link:active {
+  transform: scale(0.95);
+}
+
+.graintrack3d-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+}
 }

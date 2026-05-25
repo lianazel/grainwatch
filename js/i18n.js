@@ -43,6 +43,12 @@ const I18N = {
     "update_time":        { fr: "Mis à jour à", en: "Updated at" },
     "refresh":            { fr: "Rafraîchir", en: "Refresh" },
 
+    // GrainTrack3D inter-app link
+    "graintrack3d_tooltip": {
+      fr: "Voir le transit maritime mondial sur GrainTrack3D",
+      en: "View global maritime transit on GrainTrack3D"
+    },
+
     // Source selector
     "source_worldbank":   { fr: "Banque Mondiale", en: "World Bank" },
     "source_usda":        { fr: "USDA", en: "USDA" },
