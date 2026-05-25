@@ -4,7 +4,7 @@
 
 **GrainWatch** est une application web mono-page (SPA) de suivi en temps réel des prix des matières premières agricoles. Déployée sur GitHub Pages, elle ne nécessite aucun backend et consomme exclusivement des APIs publiques gratuites.
 
-- **Version actuelle** : 0.8.1 (21 mai 2026)
+- **Version actuelle** : 0.8.2 (25 mai 2026)
 - **URL de production** : https://grainwatch.vercel.app/ (déploiement actuel via Vercel)
 - **Stack** : Vanilla JS / HTML5 / CSS3 / Chart.js — Hébergement statique pur
 - **Hébergement** : Vercel en production. Le sous-dossier `site/` est conservé pour un déploiement GitHub Pages alternatif (cf. `DEPLOY_GITHUB.md`).
@@ -52,7 +52,7 @@ GrainWatch/
 
 **Contrainte CORS** : les APIs Banque Mondiale et USDA sont bloquées par CORS depuis un navigateur. La page Sources affiche actuellement des données d'exemple avec l'URL réelle copiable pour test manuel. Ne jamais contourner avec un proxy non audité.
 
-### Fonctionnalités implémentées (v0.8.1)
+### Fonctionnalités implémentées (v0.8.2)
 - Affichage des cours avec Chart.js (gradients adaptatifs dark/light)
 - Mode sombre/clair : détection OS automatique + toggle manuel + persistance localStorage
 - Alertes de prix : création, historique cliquable, détection de doublons, pré-remplissage
@@ -198,6 +198,7 @@ Une page /privacy minimaliste doit être créée et liée dans le footer.
 
 | Version | Date       | Nouveautés principales                                           |
 |---------|------------|------------------------------------------------------------------|
+| 0.8.2   | 25/05/2026 | Lien inter-app GrainTrack3D (icône globe, 3 états actif/désactivé/masqué, 12 céréales supportées via `?grain=<key>`), unité sucre `c/kg` → `¢/kg`, lisibilité tooltips en dark mode (`.tooltip-bubble`/`.tooltip-arrow`/`.trend-tooltip`), bump version footer |
 | 0.8.1   | 21/05/2026 | Security hardening : XSS GDELT, meta CSP, SRI CDN, innerHTML §5 (historique alertes, source badge), validation inputs alertes (whitelist type + bornes), désérialisation localStorage défensive (alerts/favorites/visible/theme), radix 10 parseInt, filtrage console.* (.message uniquement) |
 | 0.8.0   | 07/05/2026 | Mode sombre, alertes améliorées (historique, doublons), fix mobile |
 | 0.7.x   | antérieur  | Structure de base, graphiques, alertes V1                        |
@@ -352,6 +353,43 @@ La CSP en header peut être migrée dans un second temps (mêmes directives que 
 - **Format paramètre URL vérifié Phase 0** : GrainTrack3D `src/App.jsx:30-36` lit `URLSearchParams.get('grain')` puis valide via `GRAIN_LIST.some(g => g.key === grainParam)` — keys lowercase (`wheat`, `corn`, `rice`, `soybean`, `sugar`, `barley`, `oats`, `sorghum`, `rapeseed`, `groundnut`, `lentils`, `millet`). GrainWatch utilise déjà ces mêmes IDs lowercase → aucune transformation requise, juste un filtre de whitelist.
 - **CSP** : pas de modification nécessaire. La meta CSP couvre fetch/connect/script, mais une navigation `<a target="_blank">` ouvre un nouveau contexte de navigation non couvert par `connect-src`/`default-src` (et la directive `navigate-to` n'est pas définie). Vérifié OK.
 - Rapport détaillé : `tasks/RAPPORT_LINK_GRAINTRACK3D_v1.md`.
+
+### Fait — Correctifs visuels post-déploiement (25/05/2026)
+- [x] **Visibilité icône globe — cause racine bug structurel** : tout le bloc CSS `.graintrack3d-link` du commit `bb77883` était piégé à l'intérieur du `@media (max-width: 768px)` (accolade fermante mal placée). Résultat : sur desktop, le lien tombait sur le style `<a>` par défaut du navigateur (couleur bleue navigateur). Bloc CSS sorti du `@media`, et améliorations visuelles ajoutées :
+  - Background discret au repos (`rgba(192,57,43,0.10)`, hover `0.22`) — l'icône a maintenant du corps sans hover
+  - `stroke-width: 2.2` forcé via CSS (au lieu de l'attribut SVG `1.8`, trop fin aux 28×28 px UI)
+  - Override dark mode dédié : `var(--terracotta-light)` (#F09070, plus lumineux que `--terracotta` dark #E07B5A) + background remonté à `rgba(240,144,112,0.18)` (hover `0.32`)
+- [x] **Unité sucre `c/kg` → `¢/kg`** (U+00A2) — `js/commodities.js` : 7 denrées concernées (sugar, coffee, cotton, rubber, tea, orange, wool), `unit` et `unitWB` mis à jour. `js/app.js:409` : `.replace("c/", "ct/")` → `.replace("¢/", "ct/")` pour que la conversion EUR continue de produire `ct/kg` (centimes d'euro).
+- [x] **Tooltips dark mode illisibles** — `.tooltip-bubble` utilisait `background: var(--black)` qui en dark mode vaut `#E8E4DB` (cream) → fond cream sur page cream = invisible. Override dans la section "DARK MODE — Component-specific overrides" (ligne 1856+) :
+  - `.tooltip-bubble` dark : `background: var(--grey-light)` (#333355 distinct du fond `--creme` #1A1A2E et des cards `--white` #242444) + `color: #F5F0E5` (ratio ~10:1, WCAG AA) + bord `1px solid rgba(255,255,255,0.10)` + shadow renforcée
+  - `.tooltip-arrow` dark : même `--grey-light` pour rester aligné avec la bulle
+  - `.trend-tooltip` dark : harmonisé sur le même fond, on garde le bord olive distinctif
+  - Chart.js tooltip : déjà géré dynamiquement dans `js/chart.js:68` (`dark ? '#333355' : '#2C2C2C'`) — pas touché
+- [x] **État désactivé icône globe** — nouvelle logique 3 états dans `loadDetail()` :
+  - **ACTIF** : denrée ∈ `GRAINTRACK3D_SUPPORTED_KEYS` → icône colorée cliquable
+  - **DÉSACTIVÉ** : denrée hors catalogue (café, cacao, coton, tournesol, huile palme, huile soja, caoutchouc, thé, jus orange, banane, huile olive, huile coco, laine, tabac) → icône grisée (opacity 0.45 light / 0.55 dark) + barre diagonale superposée (via `::after` + `linear-gradient`) + tooltip explicatif "Denrée non suivie par GrainTrack3D (céréales et oléagineux uniquement)"
+  - **MASQUÉ** : aucune denrée sélectionnée → `display: none`
+- [x] **CSS `.graintrack3d-link--disabled`** — **volontairement SANS `pointer-events: none`** (Option A du spec) : sinon le `title` natif ne s'afficherait pas au survol. Le clic est neutralisé en JS via `e.preventDefault()` quand la classe est présente, dans un click handler one-shot ajouté à `bindEvents()` (ligne 250+).
+- [x] **Accessibilité** — `aria-disabled="true"` posé/retiré dynamiquement avec la classe, en complément du `title` pour les lecteurs d'écran.
+- [x] **i18n** — nouvelle clé `graintrack3d_tooltip_disabled` FR/EN ajoutée à `js/i18n.js` (à côté de `graintrack3d_tooltip`).
+- [x] **Bump version footer** — `index.html:559` : `v0.8.1` → `v0.8.2`.
+- [x] **Synchro `site/`** — `index.html`, `css/style.css`, `js/app.js`, `js/i18n.js`, `js/commodities.js` recopiés à chaque commit.
+
+### Référence — Dark mode (mécanisme du projet)
+Tout le dark mode est piloté par l'attribut `[data-theme]` sur `<html>` (`document.documentElement`), posé par `App._initTheme()` (`js/app.js:983+`) :
+- Lecture stricte de `localStorage.getItem('grainwatch_theme')` (whitelist `'dark'|'light'` uniquement)
+- Sinon, lecture de `window.matchMedia('(prefers-color-scheme: dark)')` → pose `data-theme="dark"`
+- Sinon, pas d'attribut (= light par défaut)
+- Le toggle 🌙/☀️ écrit dans localStorage et bascule l'attribut
+- Écouteur `matchMedia.change` : ne touche à rien si l'utilisateur a fait un choix manuel (cohérence whitelist)
+
+**Variables CSS** (`css/style.css:6-75`) : `:root` (light) et `[data-theme="dark"]` (dark) redéfinissent les mêmes noms (`--terracotta`, `--white`, `--black`, `--grey`, etc.) **avec inversion sémantique** :
+- `--black` = `#2C2C2C` (light) → `#E8E4DB` (dark) — donc `color: var(--black)` reste lisible quel que soit le mode
+- `--white` = `#FFFFFF` (light) → `#242444` (dark) — idem pour les fonds
+
+**Pièges connus** : si un composant utilise `var(--black)` comme **background** (au lieu de `color`), il devient cream sur cream en dark. C'était le bug des tooltips. Pour tout composant inversé (fond sombre/texte clair en light mode), prévoir un override `[data-theme="dark"]` dédié.
+
+**Mirror prefers-color-scheme** : la duplication dans `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { ... } }` (lignes 55-75) ne concerne **que** les variables CSS. Les overrides composant (lignes 1739-1885) utilisent uniquement `[data-theme="dark"]` car `_initTheme()` pose toujours l'attribut.
 
 ### A faire — Conformité
 - [ ] Implémenter une page /privacy minimaliste et la lier dans le footer
