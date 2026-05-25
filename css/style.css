@@ -3645,11 +3645,13 @@ body {
   .toast {
     max-width: 100%;
   }
+}
 
 /* ============================================================
    GrainTrack3D — Icône de lien inter-app (header détail denrée)
-   La couleur var(--terracotta) bascule automatiquement en dark mode
-   (cf. déclarations [data-theme="dark"] en haut du fichier).
+   Cible le bloc HORS @media — règles applicables desktop ET mobile.
+   var(--terracotta) bascule auto en dark mode (cf. [data-theme="dark"] ligne 35).
+   Override dark mode plus bas pour booster le contraste sur fond sombre.
    ============================================================ */
 .graintrack3d-link {
   display: inline-flex;
@@ -3659,7 +3661,9 @@ body {
   margin-right: 4px;
   border-radius: 50%;
   color: var(--terracotta);
-  background: transparent;
+  /* Background discret au repos pour donner du corps à l'icône (sinon le simple
+     stroke SVG se fond dans le bandeau crème). 10% d'opacité = WCAG AA respecté. */
+  background-color: rgba(192, 57, 43, 0.10);
   text-decoration: none;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
@@ -3667,7 +3671,7 @@ body {
 }
 
 .graintrack3d-link:hover {
-  background-color: rgba(192, 57, 43, 0.12);
+  background-color: rgba(192, 57, 43, 0.22);
   color: var(--terracotta-light);
   transform: scale(1.1);
 }
@@ -3685,5 +3689,32 @@ body {
   display: block;
   width: 28px;
   height: 28px;
+  /* Surcharge l'attribut SVG stroke-width="1.8" — un trait plus épais
+     améliore nettement la lisibilité aux tailles d'icône UI (28px). */
+  stroke-width: 2.2;
 }
+
+/* ── Dark mode : terracotta plus lumineux + background plus marqué ─────────
+   Sur fond sombre, --terracotta (#E07B5A) est encore un peu mat. On force
+   --terracotta-light (#F09070) et on remonte l'opacité du background pour
+   garantir le contraste WCAG AA. */
+[data-theme="dark"] .graintrack3d-link {
+  color: var(--terracotta-light);
+  background-color: rgba(240, 144, 112, 0.18);
+}
+
+[data-theme="dark"] .graintrack3d-link:hover {
+  color: #FFB89E;
+  background-color: rgba(240, 144, 112, 0.32);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .graintrack3d-link {
+    color: var(--terracotta-light);
+    background-color: rgba(240, 144, 112, 0.18);
+  }
+  :root:not([data-theme="light"]) .graintrack3d-link:hover {
+    color: #FFB89E;
+    background-color: rgba(240, 144, 112, 0.32);
+  }
 }

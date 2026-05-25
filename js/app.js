@@ -406,7 +406,7 @@ const App = {
         const rawUnit = source === "worldbank" ? commodity.unitWB : commodity.unit;
         // Replace currency symbols — c/ becomes "ct/" (centimes d'euro) in EUR mode
         if (currency === "EUR") {
-          unitText = rawUnit.replace("$/", "€/").replace("c/", "ct/");
+          unitText = rawUnit.replace("$/", "€/").replace("¢/", "ct/");
         } else {
           unitText = rawUnit;
         }
