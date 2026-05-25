@@ -246,6 +246,18 @@ const App = {
         this.renderCommodityList();
       });
     });
+
+    // GrainTrack3D link : neutralise le clic quand l'état est "désactivé"
+    // (denrée non couverte). Option A du spec : pas de pointer-events:none CSS
+    // pour que le tooltip natif title reste affichable au survol.
+    const gt3dLink = document.getElementById('graintrack3d-link');
+    if (gt3dLink) {
+      gt3dLink.addEventListener('click', (e) => {
+        if (gt3dLink.classList.contains('graintrack3d-link--disabled')) {
+          e.preventDefault();
+        }
+      });
+    }
   },
 
   // --------------------------------------------------------
@@ -383,8 +395,12 @@ const App = {
       document.getElementById('detailCode').textContent = commodity.code;
       document.getElementById('detailPrice').textContent = symbol + this.formatNumber(currentPrice);
 
-      // ── Lien GrainTrack3D : visible uniquement pour les denrées supportées
-      //    par l'app sœur (12 céréales/oléagineux trackées via AIS).
+      // ── Lien GrainTrack3D — 3 états : ACTIF / DÉSACTIVÉ / MASQUÉ ────────
+      //    ACTIF : denrée dans les 12 céréales/oléagineux trackés par AIS
+      //    DÉSACTIVÉ : denrée sélectionnée mais hors catalogue GrainTrack3D
+      //                (café, cacao, coton…) — icône grisée + barrée + tooltip
+      //                explicatif, pour ne pas laisser l'utilisateur perplexe
+      //    MASQUÉ : aucune denrée sélectionnée
       const gt3dLink = document.getElementById('graintrack3d-link');
       if (gt3dLink) {
         const gt3dUrl = buildGrainTrack3DUrl(selectedCommodity);
@@ -392,9 +408,19 @@ const App = {
           gt3dLink.href = gt3dUrl;
           gt3dLink.title = I18N.t('graintrack3d_tooltip');
           gt3dLink.style.display = 'inline-flex';
+          gt3dLink.classList.remove('graintrack3d-link--disabled');
+          gt3dLink.removeAttribute('aria-disabled');
+        } else if (selectedCommodity) {
+          gt3dLink.href = '#';
+          gt3dLink.title = I18N.t('graintrack3d_tooltip_disabled');
+          gt3dLink.style.display = 'inline-flex';
+          gt3dLink.classList.add('graintrack3d-link--disabled');
+          gt3dLink.setAttribute('aria-disabled', 'true');
         } else {
           gt3dLink.style.display = 'none';
           gt3dLink.href = '#';
+          gt3dLink.classList.remove('graintrack3d-link--disabled');
+          gt3dLink.removeAttribute('aria-disabled');
         }
       }
 

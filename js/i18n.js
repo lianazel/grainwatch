@@ -48,6 +48,10 @@ const I18N = {
       fr: "Voir le transit maritime mondial sur GrainTrack3D",
       en: "View global maritime transit on GrainTrack3D"
     },
+    "graintrack3d_tooltip_disabled": {
+      fr: "Denrée non suivie par GrainTrack3D (céréales et oléagineux uniquement)",
+      en: "Commodity not tracked by GrainTrack3D (grains and oilseeds only)"
+    },
 
     // Source selector
     "source_worldbank":   { fr: "Banque Mondiale", en: "World Bank" },

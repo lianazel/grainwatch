@@ -3722,6 +3722,61 @@ body {
   stroke-width: 2.2;
 }
 
+/* ── État DÉSACTIVÉ — denrée non couverte par GrainTrack3D ─────────────────
+   Volontairement SANS pointer-events:none : le hover natif (title attribute)
+   doit pouvoir s'afficher pour expliquer pourquoi l'icône est éteinte.
+   Le clic est neutralisé en JS via preventDefault() (cf. app.js bindEvents). */
+.graintrack3d-link--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: rgba(107, 107, 107, 0.10);
+  color: var(--grey);
+  position: relative;
+}
+
+.graintrack3d-link--disabled:hover {
+  /* Pas de scale ni de bg renforcé : l'utilisateur doit comprendre que c'est
+     inactif. Seul le tooltip natif change le rendu. */
+  opacity: 0.55;
+  background-color: rgba(107, 107, 107, 0.15);
+  color: var(--grey);
+  transform: none;
+}
+
+/* Barre diagonale "non disponible" superposée à l'icône via ::after. */
+.graintrack3d-link--disabled::after {
+  content: '';
+  position: absolute;
+  top: 15%;
+  left: 15%;
+  width: 70%;
+  height: 70%;
+  border-radius: 50%;
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 1px),
+    currentColor calc(50% - 1px),
+    currentColor calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Dark mode : l'icône désactivée doit rester subtilement visible (pas
+   invisible). On remonte opacity et on adapte le fond à la palette dark. */
+[data-theme="dark"] .graintrack3d-link--disabled {
+  opacity: 0.55;
+  background-color: rgba(160, 160, 176, 0.10);
+  color: var(--grey);
+}
+
+[data-theme="dark"] .graintrack3d-link--disabled:hover {
+  opacity: 0.65;
+  background-color: rgba(160, 160, 176, 0.15);
+  color: var(--grey);
+}
+
 /* ── Dark mode : terracotta plus lumineux + background plus marqué ─────────
    Sur fond sombre, --terracotta (#E07B5A) est encore un peu mat. On force
    --terracotta-light (#F09070) et on remonte l'opacité du background pour
