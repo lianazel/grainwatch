@@ -1853,6 +1853,34 @@ body {
   border-color: var(--grey-light);
 }
 
+/* ── Tooltips & info-bulles : lisibilité dark mode ──────────────────────
+   .tooltip-bubble base utilise background:var(--black) qui en dark vaut
+   #E8E4DB (cream) — fond cream sur page cream = invisible. On force ici
+   un gris foncé bleuté (#333355 = --grey-light en dark) suffisamment
+   distinct du fond de page (--creme dark = #1A1A2E) tout en gardant
+   du contraste avec le texte (ratio ~10:1 avec #F5F0E5).
+   ──────────────────────────────────────────────────────────────────── */
+[data-theme="dark"] .tooltip-bubble {
+  background: var(--grey-light);
+  color: #F5F0E5;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .tooltip-arrow {
+  background: var(--grey-light);
+}
+
+/* .trend-tooltip : déjà bg=var(--white)=#242444 navy + bord olive vert
+   en dark — fonctionnel mais on harmonise pour cohérence visuelle avec
+   .tooltip-bubble (même fond, même texte). On garde le bord olive
+   distinctif (c'est un tooltip d'information statistique, pas un selector). */
+[data-theme="dark"] .trend-tooltip {
+  background: var(--grey-light);
+  color: #F5F0E5;
+  border-color: var(--olive);
+}
+
 /* Alert history: reusable items */
 .alert-history-reusable {
   cursor: pointer;
