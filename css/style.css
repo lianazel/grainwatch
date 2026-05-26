@@ -1937,6 +1937,14 @@ body {
   border-color: var(--grey-light);
 }
 
+/* Alerte déclenchée en dark : le fond rose clair de base (#FEF2F2) rendait le
+   texte (var(--black) → clair en dark) illisible. On passe à un fond rouge
+   sombre translucide pour restaurer le contraste (texte clair lisible, WCAG AA). */
+[data-theme="dark"] .alert-card.triggered {
+  background: rgba(239, 83, 80, 0.16);
+  border-left-color: var(--red);
+}
+
 /* Toast */
 [data-theme="dark"] .toast {
   background: var(--grey-lighter);
@@ -3892,27 +3900,15 @@ body {
   stroke-width: 2.2;
 }
 
-/* P3 v0.9.1 — ⓘ tactile adjacent à l'icône GrainTrack3D désactivée.
-   Desktop : le title natif du lien suffit au survol → wrap masqué.
-   Tactile : on affiche un ⓘ qui révèle le message au tap (le title natif
-   ne s'affiche jamais au tap). Réutilise .selector-with-tooltip + clamp P2. */
-.graintrack3d-info { display: none; }
-
-@media (hover: none) {
-  .graintrack3d-info {
-    display: inline-flex;
-    position: relative;
-    align-self: center;
-    margin-right: 4px;
-  }
-  /* L'ⓘ est l'élément principal du wrap (pas un badge en coin) → flux normal. */
-  .graintrack3d-info .tooltip-info {
-    position: static;
-    top: auto;
-    right: auto;
-    width: 20px;
-    height: 20px;
-  }
+/* P3 / C2 v0.9.1 — Wrapper d'ancrage de la bulle explicative GrainTrack3D.
+   L'icône elle-même déclenche la bulle : tap sur l'icône grisée (mobile) ou
+   survol (desktop). La bulle (.tooltip-bubble, créée en JS pour l'état désactivé)
+   se positionne par rapport à ce conteneur et bénéficie du clamp P2 (--tt-shift). */
+.graintrack3d-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
 }
 
 /* ── État DÉSACTIVÉ — denrée non couverte par GrainTrack3D ─────────────────

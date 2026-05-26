@@ -247,14 +247,23 @@ const App = {
       });
     });
 
-    // GrainTrack3D link : neutralise le clic quand l'état est "désactivé"
-    // (denrée non couverte). Option A du spec : pas de pointer-events:none CSS
-    // pour que le tooltip natif title reste affichable au survol.
+    // GrainTrack3D link : quand la denrée n'est pas couverte (état désactivé),
+    // le clic ne navigue pas ET ouvre/ferme la bulle explicative (C2 — le tap sur
+    // l'icône grisée est le geste naturel ; sur tactile aucun title ne s'afficherait).
     const gt3dLink = document.getElementById('graintrack3d-link');
     if (gt3dLink) {
       gt3dLink.addEventListener('click', (e) => {
-        if (gt3dLink.classList.contains('graintrack3d-link--disabled')) {
-          e.preventDefault();
+        if (!gt3dLink.classList.contains('graintrack3d-link--disabled')) return;
+        e.preventDefault();
+        const wrap = document.getElementById('gt3dWrap');
+        if (!wrap || !wrap.querySelector('.tooltip-bubble')) return;
+        // stopPropagation : empêche la délégation document de refermer aussitôt.
+        e.stopPropagation();
+        const wasOpen = wrap.classList.contains('tooltip-open');
+        this._closeAllTooltips();
+        if (!wasOpen) {
+          wrap.classList.add('tooltip-open');
+          this._clampTooltip(wrap);
         }
       });
     }
@@ -401,27 +410,33 @@ const App = {
       //                (café, cacao, coton…) — icône grisée + barrée + tooltip
       //                explicatif, pour ne pas laisser l'utilisateur perplexe
       //    MASQUÉ : aucune denrée sélectionnée
+      const gt3dWrap = document.getElementById('gt3dWrap');
       const gt3dLink = document.getElementById('graintrack3d-link');
-      if (gt3dLink) {
+      if (gt3dWrap && gt3dLink) {
         const gt3dUrl = buildGrainTrack3DUrl(selectedCommodity);
         if (gt3dUrl) {
+          // ACTIF — lien cliquable. title natif conservé (hint desktop au survol ;
+          // pas de bulle dans cet état, donc aucun double-tooltip).
           gt3dLink.href = gt3dUrl;
           gt3dLink.title = I18N.t('graintrack3d_tooltip');
-          gt3dLink.style.display = 'inline-flex';
+          gt3dLink.setAttribute('aria-label', I18N.t('graintrack3d_tooltip'));
           gt3dLink.classList.remove('graintrack3d-link--disabled');
           gt3dLink.removeAttribute('aria-disabled');
+          gt3dWrap.style.display = 'inline-flex';
           this._removeGrainTrack3DInfo();
         } else if (selectedCommodity) {
+          // DÉSACTIVÉ — bulle explicative : tap sur l'icône (mobile) ou survol
+          // (desktop) l'affiche. Pas de title natif ici → évite le double-tooltip.
           gt3dLink.href = '#';
-          // title natif conservé pour desktop/lecteurs d'écran ; sur mobile il
-          // ne s'affiche jamais au tap → on ajoute un ⓘ tactile (cf. _showGrainTrack3DInfo).
-          gt3dLink.title = I18N.t('graintrack3d_tooltip_disabled');
-          gt3dLink.style.display = 'inline-flex';
+          gt3dLink.removeAttribute('title');
+          gt3dLink.setAttribute('aria-label', I18N.t('graintrack3d_tooltip_disabled'));
           gt3dLink.classList.add('graintrack3d-link--disabled');
           gt3dLink.setAttribute('aria-disabled', 'true');
+          gt3dWrap.style.display = 'inline-flex';
           this._showGrainTrack3DInfo(I18N.t('graintrack3d_tooltip_disabled'));
         } else {
-          gt3dLink.style.display = 'none';
+          // MASQUÉ — aucune denrée sélectionnée
+          gt3dWrap.style.display = 'none';
           gt3dLink.href = '#';
           gt3dLink.classList.remove('graintrack3d-link--disabled');
           gt3dLink.removeAttribute('aria-disabled');
@@ -1058,26 +1073,16 @@ const App = {
     if (dx !== 0) bubble.style.setProperty('--tt-shift', `${Math.round(dx)}px`);
   },
 
-  // P3 : ⓘ tactile pour l'icône GrainTrack3D désactivée. Le title natif ne
-  // s'affiche jamais au tap sur mobile ; on réutilise le système maison
-  // (.selector-with-tooltip → délégation _initTouchTooltips + clamp P2).
+  // P3 / C2 : bulle explicative pour l'icône GrainTrack3D désactivée. L'icône
+  // elle-même est le déclencheur (tap mobile / survol desktop) via le wrapper
+  // #gt3dWrap (.selector-with-tooltip) → délégation _initTouchTooltips + clamp P2.
   // Construction DOM en createElement/textContent (zéro innerHTML — sécurité).
   _showGrainTrack3DInfo(message) {
-    const link = document.getElementById('graintrack3d-link');
-    if (!link || !link.parentNode) return;
-    let wrap = document.getElementById('gt3dInfo');
-    if (!wrap) {
-      wrap = document.createElement('span');
-      wrap.className = 'selector-with-tooltip graintrack3d-info';
-      wrap.id = 'gt3dInfo';
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'tooltip-info';
-      btn.setAttribute('aria-expanded', 'false');
-      btn.textContent = 'ⓘ';
-
-      const bubble = document.createElement('div');
+    const wrap = document.getElementById('gt3dWrap');
+    if (!wrap) return;
+    let bubble = wrap.querySelector('.tooltip-bubble');
+    if (!bubble) {
+      bubble = document.createElement('div');
       bubble.className = 'tooltip-bubble';
       bubble.setAttribute('role', 'tooltip');
       const icon = document.createElement('span');
@@ -1090,18 +1095,17 @@ const App = {
       bubble.appendChild(icon);
       bubble.appendChild(txt);
       bubble.appendChild(arrow);
-
-      wrap.appendChild(btn);
       wrap.appendChild(bubble);
-      link.parentNode.insertBefore(wrap, link.nextSibling);
     }
-    wrap.querySelector('.tooltip-info').setAttribute('aria-label', message);
     wrap.querySelector('.gt3d-info-text').textContent = message;
   },
 
   _removeGrainTrack3DInfo() {
-    const wrap = document.getElementById('gt3dInfo');
-    if (wrap) wrap.remove();
+    const wrap = document.getElementById('gt3dWrap');
+    if (!wrap) return;
+    wrap.classList.remove('tooltip-open');
+    const bubble = wrap.querySelector('.tooltip-bubble');
+    if (bubble) bubble.remove();
   },
 
   // --------------------------------------------------------
@@ -1130,9 +1134,14 @@ const App = {
     if (closeBtn) closeBtn.addEventListener('click', () => this.closeMenu());
     overlay.addEventListener('click', () => this.closeMenu());
 
-    // Pastille API active (mobile) → ouvre le menu (le sélecteur de source y vit)
+    // Pastille API active (mobile) → ouvre le menu et amène le focus sur le
+    // sélecteur de source (section « Sources de données ») : raccourci ergonomique.
     const pastille = document.getElementById('sourcePastille');
-    if (pastille) pastille.addEventListener('click', () => this.openMenu());
+    if (pastille) pastille.addEventListener('click', () => {
+      this.openMenu();
+      const activeApi = document.querySelector('.menu-api-btn.active') || document.querySelector('.menu-api-btn');
+      if (activeApi) activeApi.focus();
+    });
 
     // « En savoir plus » → page Sources existante
     if (moreBtn) {
