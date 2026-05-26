@@ -52,13 +52,17 @@ GrainWatch/
 
 **Contrainte CORS** : les APIs Banque Mondiale et USDA sont bloquées par CORS depuis un navigateur. La page Sources affiche actuellement des données d'exemple avec l'URL réelle copiable pour test manuel. Ne jamais contourner avec un proxy non audité.
 
-### Fonctionnalités implémentées (v0.8.2)
+### Fonctionnalités implémentées (v0.9.0)
 - Affichage des cours avec Chart.js (gradients adaptatifs dark/light)
 - Mode sombre/clair : détection OS automatique + toggle manuel + persistance localStorage
 - Alertes de prix : création, historique cliquable, détection de doublons, pré-remplissage
-- Responsive mobile : header 2 lignes, bouton rafraîchir icône seule, fix iOS touchend
+- Responsive mobile : barre d'outils une-ligne avec débordement auto vers le menu (`ResizeObserver`), bouton rafraîchir icône seule, fix iOS touchend
+- **Tooltips tactiles** (v0.9.0) : indicateur ⓘ tap-to-show sous `@media (hover:none)` (source/devise/période/tendance)
+- **Menu hamburger** (v0.9.0) : panneau latéral À propos / Sources / Réglages, focus trap, déplacement des contrôles débordants
+- **Footer mobile allégé** (v0.9.0) : disclaimer déplacé dans le menu À propos
+- **Polices auto-hébergées** (v0.9.0) : Inter + JetBrains Mono en `/fonts`, CSP `font-src 'self'` (plus de dépendance Google Fonts)
 - Panneau géopolitique (GDELT)
-- Déploiement GitHub Pages via site/
+- Déploiement Vercel depuis `main` (fallback GitHub Pages via `site/`)
 
 ### Persistance localStorage
 | Clé                          | Type     | Usage                                                  |
@@ -386,7 +390,8 @@ Diagnostic `DIAGNOSTIC_MOBILE_v0.8.2.md` → implémentation `tasks/RAPPORT_IMPL
 - [x] **F4 — Polices auto-hébergées** : 4 `.woff2` (Inter+JetBrains variables, latin+latin-ext) dans `/fonts`, `@font-face` en tête de `style.css`, suppression des `<link>` Google Fonts, **CSP resserrée** `font-src 'self'` + `style-src 'self' 'unsafe-inline'` (meta `index.html` + `vercel.json`).
 - [x] **Synchro `site/`** : `index.html`, `css/style.css`, `js/app.js`, `js/i18n.js`, `fonts/` (4 woff2).
 - _Convention actée_ : comportement tactile ciblé par `@media (hover:none)`/`(pointer:coarse)`, jamais par breakpoint de largeur (cf. `tasks/lessons.md`).
-- _Tests runtime/device_ : à valider par JC (pas de navigateur headless dispo en env de dev). Vérif statique faite (syntaxe JS `node --check`, accolades CSS, IDs référencés présents).
+- _Déploiement_ : mergé dans `main` + push (commit `71fd3bd`, branche `feat/mobile-ux-v0.9.0` ff-only) → Vercel déployé le 26/05/2026. **Vérifié en prod** : header CSP `font-src 'self'` (plus de Google Fonts), `https://grainwatch.vercel.app/fonts/inter-latin.woff2` → 200 `font/woff2`.
+- _Reste à valider_ : tests UX runtime sur device (tap tooltips, menu, overflow, focus trap) — pas de navigateur headless en env de dev. Vérif statique faite (syntaxe JS `node --check`, accolades CSS, IDs référencés présents).
 
 ### Référence — Dark mode (mécanisme du projet)
 Tout le dark mode est piloté par l'attribut `[data-theme]` sur `<html>` (`document.documentElement`), posé par `App._initTheme()` (`js/app.js:983+`) :
@@ -440,11 +445,10 @@ Cette page contiendra un sélecteur de contexte avec deux modes :
 Céréale en cours : filtre GDELT sur la denrée actuellement analysée
 Toutes les denrées : aucun filtre sur le code céréale — vue globale
 
-3. Menu hamburger
-Remplacer les boutons et liens dispersés dans l'application par un menu hamburger centralisé.
-Objectif : navigation propre et scalable à mesure que de nouvelles pages/fonctionnalités s'ajoutent.
-4. vercel.json — Headers de sécurité
-Quick win : ajouter un vercel.json avec les headers manquants identifiés lors de l'audit (X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy) pour viser un score A+ sur securityheaders.com.
+3. ~~Menu hamburger~~ ✅ **FAIT en v0.9.0** — panneau latéral centralisé (À propos / Sources / Réglages) + débordement automatique de la barre d'outils.
+4. ~~vercel.json — Headers de sécurité~~ ✅ **FAIT** (v0.8.2, complété v0.9.0 avec CSP `font-src 'self'`) — X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP, X-Frame-Options.
+
+Restant pour v0.9 : items 1 (fix GDELT) et 2 (page géopolitique dédiée).
 
 ---
 
