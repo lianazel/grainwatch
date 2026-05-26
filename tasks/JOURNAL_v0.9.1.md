@@ -199,3 +199,12 @@ Diagnostic `DIAGNOSTIC_MOBILE_v0.9.1.md` (P1-P4) + 2 vagues de correctifs après
 - [x] **Bump v0.9.1** : `APP_VERSION`, footer/menu, CHANGELOG `[0.9.1]`, ce tableau.
 - _Déploiement_ : commits `f9c9293` (P4), `9cde1fa` (P1-P3), `f8437f5` (bump), `904e3c3` (C1-C3), `a083f6f` (C4), `442d094` (changelog) → `main` + Vercel.
 - _Reste à valider_ : tests UX runtime sur device (vider le cache Safari avant re-test C4) — pas de navigateur en env de dev.
+
+### Fait — C4-bis : masquage forcé du sélecteur API via JS (26/05/2026)
+Le CSS `!important` (C4) n'a pas suffi : Safari iOS continuait d'afficher `#ctrlSource` en portrait. Double verrouillage CSS (conservé) + JS. Rapport : `tasks/RAPPORT_CORRECTIF_C4bis_FORCE_JS_v1.md`.
+- [x] **Méthode `App.enforceSourceHiding()`** (`js/app.js`, après `setupToolbarOverflow`) : `matchMedia('(max-width: 768px)')` pilote un style inline. Mobile → `#ctrlSource.style.display='none'`, pastille `''` (CSS reprend). Desktop → `#ctrlSource` inline retiré (`''`), pastille `'none'`. Listener `change` (avec fallback `addListener` pour Safari < 14) pour la rotation portrait↔paysage. Adapté en **méthode** de l'objet `App` (le codebase n'a pas de fonctions standalone) vs le snippet du prompt — même logique.
+- [x] **Appel dans `init()`** après `this.setupToolbarOverflow()`.
+- [x] **Pourquoi ça tient** : si la règle CSS `!important` n'est pas appliquée (cache/rendu WebKit), le style inline `display:none` masque quand même `#ctrlSource` — aucune autre règle ne le ré-affiche.
+- [x] **Conformité** : zéro `innerHTML`/donnée externe ; ne touche que `display` → neutre dark mode.
+- [x] **Synchro `site/`** : `js/app.js` → `site/js/app.js` (`node --check` OK sur les deux).
+- _Reste à valider_ : test device réel (vider cache Safari) — pas de navigateur en env de dev.

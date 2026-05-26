@@ -66,6 +66,7 @@ const App = {
     this._setVersions();
     this._initMenu();
     this.setupToolbarOverflow();
+    this.enforceSourceHiding();  // C4-bis : bretelle JS pour Safari iOS
     this.updateTime();
     this.updateSourceBadge();
     this.updateSourceTooltip();
@@ -1276,6 +1277,40 @@ const App = {
       ro.observe(headerRight);
     } else {
       window.addEventListener('resize', relayout);
+    }
+  },
+
+  // C4-bis : double verrouillage du masquage du sélecteur de source.
+  // Safari iOS a continué d'afficher #ctrlSource en portrait malgré la règle
+  // CSS `display: none !important` (cause non reproductible côté code — cache /
+  // rendu WebKit). On ajoute une bretelle JS : style inline piloté par matchMedia,
+  // qui garantit le comportement quel que soit l'état du cache CSS.
+  // Desktop : on retire le style inline → le CSS reprend la main normalement.
+  enforceSourceHiding() {
+    const ctrl = document.getElementById('ctrlSource');
+    const pastille = document.getElementById('sourcePastille');
+    if (!ctrl) return;
+
+    const mq = window.matchMedia('(max-width: 768px)');
+
+    const apply = (mobile) => {
+      if (mobile) {
+        ctrl.style.display = 'none';
+        if (pastille) pastille.style.display = '';
+      } else {
+        ctrl.style.display = '';
+        if (pastille) pastille.style.display = 'none';
+      }
+    };
+
+    apply(mq.matches);
+
+    // Rotation portrait ↔ paysage / resize
+    if (mq.addEventListener) {
+      mq.addEventListener('change', (e) => apply(e.matches));
+    } else if (mq.addListener) {
+      // Fallback Safari ancien (< 14)
+      mq.addListener((e) => apply(e.matches));
     }
   },
 
