@@ -216,4 +216,4 @@ Diagnostic (lecture seule) `tasks/RAPPORT_DIAGNOSTIC_C6_TOOLBAR_MOBILE_v1.md` �
 - [x] **Bonus** : `.update-time` → `display:none` en mobile (libère l'espace de `.header-left` qui ne rétrécit pas).
 - [x] **Scope** : les 2 modifs sont dans `@media (max-width:768px)` → desktop intact (alignement via `.header { justify-content: space-between }`). Neutre dark mode (layout only). Accolades CSS équilibrées (622/622).
 - [x] **Synchro `site/`** : `css/style.css` → `site/css/style.css`.
-- _Reste à valider_ : runtime device (iPhone 14 portrait, Chrome + Safari iOS) — pas de navigateur en env de dev. Repli Option B (mesure JS par somme `offsetWidth`) documenté dans le rapport si A échoue.
+- [x] **✅ Validé device** (iPhone 14, 27/05/2026) : toolbar correcte en portrait, débordement vers le menu fonctionnel, plus de chevauchement logo. C6 = succès. Repli Option B (mesure JS par somme `offsetWidth`) non nécessaire.
