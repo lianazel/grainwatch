@@ -32,6 +32,9 @@ function buildGrainTrack3DUrl(commodityId) {
   return url.toString();
 }
 
+// Version applicative — source unique (footer + menu À propos)
+const APP_VERSION = '0.9.0';
+
 const App = {
   state: {
     selectedCommodity: "wheat",
@@ -57,8 +60,12 @@ const App = {
     this.loadFavorites();
     this.loadVisibleCommodities();
     this.bindEvents();
+    this._initTouchTooltips();
     this.updateLangButton();
     this.applyTranslations();
+    this._setVersions();
+    this._initMenu();
+    this.setupToolbarOverflow();
     this.updateTime();
     this.updateSourceBadge();
     this.updateSourceTooltip();
@@ -929,6 +936,11 @@ const App = {
       }
     });
 
+    // ARIA labels traduisibles (ex : indicateur ⓘ des tooltips tactiles)
+    document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+      el.setAttribute('aria-label', I18N.t(el.getAttribute('data-i18n-aria')));
+    });
+
     // Tooltip texts
     const tooltipSource = document.querySelector('#tooltipSource > span:not(.tooltip-icon)');
     if (tooltipSource) tooltipSource.textContent = I18N.t("tooltip_source");
@@ -954,6 +966,209 @@ const App = {
     if (refreshBtn) {
       const svg = refreshBtn.querySelector('svg').outerHTML;
       refreshBtn.innerHTML = svg + "\n        " + I18N.t("refresh");
+    }
+  },
+
+  // --------------------------------------------------------
+  // TOOLTIPS TACTILES (tap-to-show)
+  // --------------------------------------------------------
+  // Sur appareil tactile (pas de hover), l'indicateur ⓘ révèle la bulle au tap.
+  // Délégation sur document → robuste aux ⓘ déplacés dans le menu (cf. overflow toolbar).
+  // Sur souris, l'ⓘ est masqué en CSS (@media hover:none) : ces handlers restent inertes.
+  _initTouchTooltips() {
+    document.addEventListener('click', (e) => {
+      const infoBtn = e.target.closest('.tooltip-info');
+      if (infoBtn) {
+        // Tap sur ⓘ : bascule la bulle sans déclencher les boutons fonctionnels voisins
+        e.preventDefault();
+        e.stopPropagation();
+        const wrapper = infoBtn.closest('.selector-with-tooltip, .indicator-card-trend');
+        if (!wrapper) return;
+        const wasOpen = wrapper.classList.contains('tooltip-open');
+        this._closeAllTooltips();
+        if (!wasOpen) {
+          wrapper.classList.add('tooltip-open');
+          infoBtn.setAttribute('aria-expanded', 'true');
+        }
+        return;
+      }
+      // Tap hors d'une bulle ouverte → fermeture
+      if (!e.target.closest('.tooltip-bubble, .trend-tooltip')) {
+        this._closeAllTooltips();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this._closeAllTooltips();
+    });
+  },
+
+  _closeAllTooltips() {
+    document.querySelectorAll('.tooltip-open').forEach(el => {
+      el.classList.remove('tooltip-open');
+      const btn = el.querySelector('.tooltip-info');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    });
+  },
+
+  // --------------------------------------------------------
+  // MENU HAMBURGER + DÉBORDEMENT DE LA BARRE D'OUTILS
+  // --------------------------------------------------------
+  // Affiche la version (source unique) dans le footer et le menu À propos.
+  _setVersions() {
+    const label = `GrainWatch v${APP_VERSION}`;
+    const fv = document.querySelector('.footer-version');
+    if (fv) fv.textContent = label;
+    const mv = document.getElementById('menuAboutVersion');
+    if (mv) mv.textContent = label;
+  },
+
+  _initMenu() {
+    const toggle = document.getElementById('menuToggle');
+    const panel = document.getElementById('menuPanel');
+    const overlay = document.getElementById('menuOverlay');
+    const closeBtn = document.getElementById('menuClose');
+    const moreBtn = document.getElementById('menuSourcesMore');
+    if (!toggle || !panel || !overlay) return;
+
+    this._menuLastFocus = null;
+
+    toggle.addEventListener('click', () => this.openMenu());
+    if (closeBtn) closeBtn.addEventListener('click', () => this.closeMenu());
+    overlay.addEventListener('click', () => this.closeMenu());
+
+    // « En savoir plus » → page Sources existante
+    if (moreBtn) {
+      moreBtn.addEventListener('click', () => {
+        this.closeMenu();
+        if (typeof SourcesPage !== 'undefined' && SourcesPage.open) SourcesPage.open();
+      });
+    }
+
+    // Échap (fermeture) + piège de focus (Tab) tant que le menu est ouvert
+    document.addEventListener('keydown', (e) => {
+      if (!panel.classList.contains('open')) return;
+      if (e.key === 'Escape') { this.closeMenu(); return; }
+      if (e.key === 'Tab') this._trapMenuFocus(e, panel);
+    });
+  },
+
+  openMenu() {
+    const panel = document.getElementById('menuPanel');
+    const overlay = document.getElementById('menuOverlay');
+    const toggle = document.getElementById('menuToggle');
+    if (!panel || panel.classList.contains('open')) return;
+    this._menuLastFocus = document.activeElement;
+    overlay.hidden = false;
+    void overlay.offsetWidth; // reflow → la transition d'opacité s'applique
+    overlay.classList.add('visible');
+    panel.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('menu-open');
+    const first = this._menuFocusables(panel)[0];
+    (first || panel).focus();
+  },
+
+  closeMenu() {
+    const panel = document.getElementById('menuPanel');
+    const overlay = document.getElementById('menuOverlay');
+    const toggle = document.getElementById('menuToggle');
+    if (!panel || !panel.classList.contains('open')) return;
+    panel.classList.remove('open');
+    overlay.classList.remove('visible');
+    panel.setAttribute('aria-hidden', 'true');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('menu-open');
+    setTimeout(() => { if (!panel.classList.contains('open')) overlay.hidden = true; }, 300);
+    if (this._menuLastFocus && this._menuLastFocus.focus) this._menuLastFocus.focus();
+    else if (toggle) toggle.focus();
+  },
+
+  _menuFocusables(panel) {
+    return [...panel.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )].filter(el => el.offsetParent !== null);
+  },
+
+  _trapMenuFocus(e, panel) {
+    const f = this._menuFocusables(panel);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  },
+
+  // Déplace les contrôles qui débordent de la barre vers le menu (Réglages),
+  // et les y ramène quand l'espace le permet. Déplacement de nœuds réels (pas de clone)
+  // → une seule source de vérité, aucun risque de désync d'état des toggles.
+  setupToolbarOverflow() {
+    const headerRight = document.querySelector('.header-right');
+    const menuSettings = document.getElementById('menuSettings');
+    const section = document.getElementById('menuSettingsSection');
+    const hamburger = document.getElementById('menuToggle');
+    const badge = document.getElementById('menuBadge');
+    if (!headerRight || !menuSettings || !hamburger) return;
+
+    // Ordre DOM d'origine (restauration) ; PRIORITY = ordre de retrait (1er part en premier)
+    const ORIGINAL = ['#ctrlSource', '#ctrlCurrency', '#themeToggle', '#langToggle', '#alertsBell', '#refreshBtn'];
+    const PRIORITY = [
+      { sel: '#refreshBtn',   key: 'menu_label_refresh'  },
+      { sel: '#alertsBell',   key: 'menu_label_alerts'   },
+      { sel: '#themeToggle',  key: 'menu_label_theme'    },
+      { sel: '#langToggle',   key: 'menu_label_lang'     },
+      { sel: '#ctrlCurrency', key: 'menu_label_currency' },
+      { sel: '#ctrlSource',   key: 'menu_label_source'   },
+    ];
+
+    const relayout = () => {
+      this._closeAllTooltips();
+      // 1. Reset : tout revient dans la barre, dans l'ordre d'origine, avant le hamburger
+      ORIGINAL.forEach(sel => {
+        const el = document.querySelector(sel);
+        if (!el) return;
+        const row = el.closest('.menu-setting-row');
+        headerRight.insertBefore(el, hamburger);
+        if (row) row.remove();
+      });
+      // 2. Déplacer vers le menu tant que la barre déborde
+      let moved = 0;
+      for (const item of PRIORITY) {
+        if (headerRight.scrollWidth <= headerRight.clientWidth) break;
+        const el = document.querySelector(item.sel);
+        if (!el) continue;
+        const row = document.createElement('div');
+        row.className = 'menu-setting-row';
+        const label = document.createElement('span');
+        label.className = 'menu-setting-label';
+        label.setAttribute('data-i18n', item.key);
+        label.textContent = I18N.t(item.key);
+        row.appendChild(label);
+        row.appendChild(el);
+        menuSettings.appendChild(row);
+        moved++;
+      }
+      // 3. Badge compteur + visibilité de la section Réglages
+      if (badge) {
+        badge.textContent = String(moved);
+        badge.style.display = moved ? 'flex' : 'none';
+      }
+      if (section) section.style.display = moved ? '' : 'none';
+    };
+
+    relayout();
+    if ('ResizeObserver' in window) {
+      let raf = null;
+      const ro = new ResizeObserver(() => {
+        if (raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(relayout);
+      });
+      ro.observe(headerRight);
+    } else {
+      window.addEventListener('resize', relayout);
     }
   },
 

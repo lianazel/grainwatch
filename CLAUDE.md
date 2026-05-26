@@ -4,7 +4,7 @@
 
 **GrainWatch** est une application web mono-page (SPA) de suivi en temps réel des prix des matières premières agricoles. Déployée sur GitHub Pages, elle ne nécessite aucun backend et consomme exclusivement des APIs publiques gratuites.
 
-- **Version actuelle** : 0.8.2 (25 mai 2026)
+- **Version actuelle** : 0.9.0 (26 mai 2026)
 - **URL de production** : https://grainwatch.vercel.app/ (déploiement actuel via Vercel)
 - **Stack** : Vanilla JS / HTML5 / CSS3 / Chart.js — Hébergement statique pur
 - **Hébergement** : Vercel en production. Le sous-dossier `site/` est conservé pour un déploiement GitHub Pages alternatif (cf. `DEPLOY_GITHUB.md`).
@@ -127,10 +127,12 @@ Vérifier que `index.html` contient une balise meta CSP :
 <meta http-equiv="Content-Security-Policy"
   content="default-src 'self'; 
            script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
-           connect-src https://api.worldbank.org https://apps.fas.usda.gov https://api.gdeltproject.org;
-           style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-           font-src https://fonts.gstatic.com;">
+           connect-src 'self' https://api.worldbank.org https://apps.fas.usda.gov https://api.gdeltproject.org;
+           style-src 'self' 'unsafe-inline';
+           font-src 'self';">
 ```
+
+> Depuis v0.9.0 : polices auto-hébergées (`/fonts/*.woff2`, `@font-face` dans `css/style.css`) — plus aucune dépendance Google Fonts, d'où `font-src 'self'` et `style-src` sans `fonts.googleapis.com`. Mêmes directives dupliquées en header HTTP dans `vercel.json`.
 
 Note : GitHub Pages ne supporte pas les headers HTTP personnalisés — la meta CSP dans le HTML est la seule option.
 
@@ -198,6 +200,7 @@ Une page /privacy minimaliste doit être créée et liée dans le footer.
 
 | Version | Date       | Nouveautés principales                                           |
 |---------|------------|------------------------------------------------------------------|
+| 0.9.0   | 26/05/2026 | Refonte UX mobile : tooltips tactiles (indicateur ⓘ, `@media (hover:none)`, tap-to-show), menu hamburger (panneau latéral À propos/Sources/Réglages, focus trap), débordement auto de la barre d'outils (`ResizeObserver`, déplacement de nœuds), footer mobile allégé. Sécurité : polices auto-hébergées (`/fonts`, suppression Google Fonts), CSP resserrée `font-src 'self'` (meta + `vercel.json`) |
 | 0.8.2   | 25/05/2026 | Lien inter-app GrainTrack3D (icône globe, 3 états actif/désactivé/masqué, 12 céréales supportées via `?grain=<key>`), unité sucre `c/kg` → `¢/kg`, lisibilité tooltips en dark mode (`.tooltip-bubble`/`.tooltip-arrow`/`.trend-tooltip`), bump version footer |
 | 0.8.1   | 21/05/2026 | Security hardening : XSS GDELT, meta CSP, SRI CDN, innerHTML §5 (historique alertes, source badge), validation inputs alertes (whitelist type + bornes), désérialisation localStorage défensive (alerts/favorites/visible/theme), radix 10 parseInt, filtrage console.* (.message uniquement) |
 | 0.8.0   | 07/05/2026 | Mode sombre, alertes améliorées (historique, doublons), fix mobile |
@@ -374,6 +377,16 @@ La CSP en header peut être migrée dans un second temps (mêmes directives que 
 - [x] **i18n** — nouvelle clé `graintrack3d_tooltip_disabled` FR/EN ajoutée à `js/i18n.js` (à côté de `graintrack3d_tooltip`).
 - [x] **Bump version footer** — `index.html:559` : `v0.8.1` → `v0.8.2`.
 - [x] **Synchro `site/`** — `index.html`, `css/style.css`, `js/app.js`, `js/i18n.js`, `js/commodities.js` recopiés à chaque commit.
+
+### Fait — v0.9.0 Refonte UX mobile (26/05/2026)
+Diagnostic `DIAGNOSTIC_MOBILE_v0.8.2.md` → implémentation `tasks/RAPPORT_IMPLEMENTATION_MOBILE_UX_v1.md`. 4 features :
+- [x] **F1 — Tooltips tactiles** : indicateur ⓘ (`<button class="tooltip-info">`) sur les 4 triggers (source/devise/période/tendance), visible sous `@media (hover:none)` ; bulle révélée par `:hover` OU `.tooltip-open` (tap, posée par `_initTouchTooltips()` en délégation document) ; un seul ouvert, fermeture tap-extérieur/Escape ; `role="tooltip"`/`aria-controls`/`aria-expanded`, label ⓘ traduit via `data-i18n-aria` (`applyTranslations` étendu). Suppression des 2 `display:none !important` (masquage par largeur).
+- [x] **F2 — Menu hamburger + overflow** : `#menuToggle` + panneau `.menu-panel` (`role=dialog`/`aria-modal`, focus trap, Escape, scroll-lock, slide-in). 3 sections (Réglages/Sources/À propos). `setupToolbarOverflow()` = `ResizeObserver` sur `.header-right` qui **déplace** (pas clone) les contrôles excédentaires dans `#menuSettings` (ordre : refresh→alerts→thème→langue→devise→source), badge compteur, section masquée si vide. Constante `APP_VERSION`.
+- [x] **F3 — Footer mobile** : `< 769px` masque le disclaimer (`.footer p`), ne garde que `.footer-version` (déplacé dans le menu À propos).
+- [x] **F4 — Polices auto-hébergées** : 4 `.woff2` (Inter+JetBrains variables, latin+latin-ext) dans `/fonts`, `@font-face` en tête de `style.css`, suppression des `<link>` Google Fonts, **CSP resserrée** `font-src 'self'` + `style-src 'self' 'unsafe-inline'` (meta `index.html` + `vercel.json`).
+- [x] **Synchro `site/`** : `index.html`, `css/style.css`, `js/app.js`, `js/i18n.js`, `fonts/` (4 woff2).
+- _Convention actée_ : comportement tactile ciblé par `@media (hover:none)`/`(pointer:coarse)`, jamais par breakpoint de largeur (cf. `tasks/lessons.md`).
+- _Tests runtime/device_ : à valider par JC (pas de navigateur headless dispo en env de dev). Vérif statique faite (syntaxe JS `node --check`, accolades CSS, IDs référencés présents).
 
 ### Référence — Dark mode (mécanisme du projet)
 Tout le dark mode est piloté par l'attribut `[data-theme]` sur `<html>` (`document.documentElement`), posé par `App._initTheme()` (`js/app.js:983+`) :

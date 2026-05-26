@@ -90,6 +90,34 @@ const I18N = {
       fr: "Fenêtre temporelle du graphique. Plus la période est longue, plus vous voyez la tendance de fond.",
       en: "Chart time window. The longer the period, the more you see the underlying trend."
     },
+    "tooltip_info_label": {
+      fr: "Afficher l'aide",
+      en: "Show help"
+    },
+    // Menu hamburger
+    "menu_title":          { fr: "Menu", en: "Menu" },
+    "menu_open_label":     { fr: "Ouvrir le menu", en: "Open menu" },
+    "menu_close_label":    { fr: "Fermer le menu", en: "Close menu" },
+    "menu_settings":       { fr: "Réglages", en: "Settings" },
+    "menu_sources":        { fr: "Sources de données", en: "Data sources" },
+    "menu_status_online":  { fr: "● En ligne", en: "● Online" },
+    "menu_status_always":  { fr: "Toujours disponible", en: "Always available" },
+    "menu_sources_more":   { fr: "En savoir plus", en: "Learn more" },
+    "menu_about":          { fr: "À propos", en: "About" },
+    "menu_about_text":     {
+      fr: "Outil éducatif de suivi des cours mondiaux des denrées alimentaires.",
+      en: "Educational tool for tracking global food commodity prices."
+    },
+    "menu_no_tracking":    {
+      fr: "🔒 Pas de cookies tiers, pas de tracking.",
+      en: "🔒 No third-party cookies, no tracking."
+    },
+    "menu_label_source":   { fr: "Source des données", en: "Data source" },
+    "menu_label_currency": { fr: "Devise", en: "Currency" },
+    "menu_label_lang":     { fr: "Langue", en: "Language" },
+    "menu_label_theme":    { fr: "Thème", en: "Theme" },
+    "menu_label_alerts":   { fr: "Alertes", en: "Alerts" },
+    "menu_label_refresh":  { fr: "Rafraîchir", en: "Refresh" },
 
     // Tabs
     "tab_all":            { fr: "Toutes", en: "All" },

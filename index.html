@@ -7,8 +7,8 @@
     content="default-src 'self';
              script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
              connect-src 'self' https://api.worldbank.org https://apps.fas.usda.gov https://api.gdeltproject.org;
-             style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-             font-src https://fonts.gstatic.com;
+             style-src 'self' 'unsafe-inline';
+             font-src 'self';
              img-src 'self' data:;
              base-uri 'self';
              form-action 'self';
@@ -16,8 +16,7 @@
   <title>GrainWatch — Cours Mondiaux des Denrées Alimentaires</title>
   <meta name="description" content="Suivi en temps réel des cours mondiaux des denrées alimentaires : blé, maïs, riz, soja, café, cacao et plus.">
   <link rel="stylesheet" href="css/style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Polices auto-hébergées via @font-face dans css/style.css (cf. fonts/) — plus de dépendance Google Fonts. -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
           integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"
           crossorigin="anonymous"></script>
@@ -41,8 +40,9 @@
     </div>
     <div class="header-right">
       <!-- SOURCE SELECTOR -->
-      <div class="selector-with-tooltip">
-        <div class="tooltip-bubble" id="tooltipSource">
+      <div class="selector-with-tooltip" id="ctrlSource">
+        <button type="button" class="tooltip-info" aria-controls="tooltipSource" aria-expanded="false" aria-label="Information" data-i18n-aria="tooltip_info_label">ⓘ</button>
+        <div class="tooltip-bubble" id="tooltipSource" role="tooltip">
           <span class="tooltip-icon">📡</span>
           <span>D'où viennent les prix ? Choisissez l'organisme international qui fournit les données.</span>
           <div class="tooltip-arrow"></div>
@@ -61,8 +61,9 @@
       </div>
 
       <!-- CURRENCY SELECTOR -->
-      <div class="selector-with-tooltip">
-        <div class="tooltip-bubble" id="tooltipCurrency">
+      <div class="selector-with-tooltip" id="ctrlCurrency">
+        <button type="button" class="tooltip-info" aria-controls="tooltipCurrency" aria-expanded="false" aria-label="Information" data-i18n-aria="tooltip_info_label">ⓘ</button>
+        <div class="tooltip-bubble" id="tooltipCurrency" role="tooltip">
           <span class="tooltip-icon">💱</span>
           <span id="tooltipCurrencyText">Devise d'affichage. Les cours de base sont en dollars US, convertis selon le taux du jour.</span>
           <div class="tooltip-arrow"></div>
@@ -100,6 +101,16 @@
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
         </svg>
         Rafraîchir
+      </button>
+
+      <!-- HAMBURGER MENU TOGGLE — toujours visible, accueille le débordement de la barre -->
+      <button class="menu-toggle" id="menuToggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="menuPanel" data-i18n-aria="menu_open_label">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+        <span class="menu-badge" id="menuBadge" style="display:none;">0</span>
       </button>
     </div>
   </header>
@@ -193,7 +204,8 @@
 
       <!-- PERIOD SELECTOR -->
       <div class="selector-with-tooltip inline-tooltip">
-        <div class="tooltip-bubble" id="tooltipPeriod">
+        <button type="button" class="tooltip-info" aria-controls="tooltipPeriod" aria-expanded="false" aria-label="Information" data-i18n-aria="tooltip_info_label">ⓘ</button>
+        <div class="tooltip-bubble" id="tooltipPeriod" role="tooltip">
           <span class="tooltip-icon">📅</span>
           <span>Fenêtre temporelle du graphique. Plus la période est longue, plus vous voyez la tendance de fond.</span>
           <div class="tooltip-arrow"></div>
@@ -269,7 +281,8 @@
         <div class="indicator-card indicator-card-trend">
           <span class="indicator-label" data-i18n="ind_trend">TENDANCE</span>
           <span class="indicator-value" id="indTrend">--</span>
-          <div class="trend-tooltip" id="trendTooltip">
+          <button type="button" class="tooltip-info" aria-controls="trendTooltip" aria-expanded="false" aria-label="Information" data-i18n-aria="tooltip_info_label">ⓘ</button>
+          <div class="trend-tooltip" id="trendTooltip" role="tooltip">
             <span class="trend-tooltip-icon">📐</span>
             <span data-i18n="trend_tooltip">Calculée par régression linéaire sur l'ensemble de la période. Peut différer du mouvement récent visible sur le graphique.</span>
           </div>
@@ -553,10 +566,48 @@
 
   </main>
 
+  <!-- ═══════════════════════════════════════ -->
+  <!-- HAMBURGER MENU (overlay + panneau)      -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="menu-overlay" id="menuOverlay" hidden></div>
+  <aside class="menu-panel" id="menuPanel" role="dialog" aria-modal="true" aria-label="Menu" aria-hidden="true">
+    <div class="menu-header">
+      <h2 class="menu-title" data-i18n="menu_title">Menu</h2>
+      <button class="menu-close" id="menuClose" aria-label="Fermer le menu" data-i18n-aria="menu_close_label">&times;</button>
+    </div>
+
+    <!-- Section: Réglages (cible du débordement de la barre d'outils) -->
+    <section class="menu-section menu-section-settings" id="menuSettingsSection">
+      <h3 class="menu-section-title" data-i18n="menu_settings">Réglages</h3>
+      <div class="menu-settings" id="menuSettings"><!-- contrôles déplacés ici par setupToolbarOverflow() --></div>
+    </section>
+
+    <!-- Section: Sources de données -->
+    <section class="menu-section">
+      <h3 class="menu-section-title" data-i18n="menu_sources">Sources de données</h3>
+      <ul class="menu-sources">
+        <li><span class="menu-source-name">🏛️ <span data-i18n="source_worldbank">Banque Mondiale</span></span><span class="menu-source-status menu-source-online" data-i18n="menu_status_online">● En ligne</span></li>
+        <li><span class="menu-source-name">🇺🇸 <span data-i18n="source_usda">USDA</span></span><span class="menu-source-status menu-source-online" data-i18n="menu_status_online">● En ligne</span></li>
+        <li><span class="menu-source-name">🌍 GDELT</span><span class="menu-source-status menu-source-online" data-i18n="menu_status_online">● En ligne</span></li>
+        <li><span class="menu-source-name">🔬 <span data-i18n="source_simulation">Simulation</span></span><span class="menu-source-status" data-i18n="menu_status_always">Toujours disponible</span></li>
+      </ul>
+      <button class="menu-link-btn" id="menuSourcesMore" data-i18n="menu_sources_more">En savoir plus</button>
+    </section>
+
+    <!-- Section: À propos -->
+    <section class="menu-section">
+      <h3 class="menu-section-title" data-i18n="menu_about">À propos</h3>
+      <p class="menu-about-version" id="menuAboutVersion">GrainWatch v0.9.0</p>
+      <p class="menu-about-text" data-i18n="menu_about_text">Outil éducatif de suivi des cours mondiaux des denrées alimentaires.</p>
+      <p class="menu-disclaimer" data-i18n="disclaimer">⚠ Cet outil est fourni à titre éducatif uniquement. Il ne constitue en aucun cas un conseil financier ou d'investissement. Les cours affichés proviennent de sources publiques et peuvent présenter un décalage temporel.</p>
+      <p class="menu-no-tracking" data-i18n="menu_no_tracking">🔒 Pas de cookies tiers, pas de tracking.</p>
+    </section>
+  </aside>
+
   <!-- FOOTER / DISCLAIMER -->
   <footer class="footer">
     <p data-i18n="disclaimer">⚠ Cet outil est fourni à titre éducatif uniquement. Il ne constitue en aucun cas un conseil financier ou d'investissement. Les cours affichés proviennent de sources publiques et peuvent présenter un décalage temporel.</p>
-    <div class="footer-version">GrainWatch v0.8.2</div>
+    <div class="footer-version">GrainWatch v0.9.0</div>
   </footer>
 
   <script src="js/commodities.js"></script>
