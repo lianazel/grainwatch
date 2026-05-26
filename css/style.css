@@ -2291,18 +2291,13 @@ body {
     font-size: 16px;
   }
 
-  /* Source buttons: compact text */
-  .source-btn {
-    padding: 5px 8px;
-    font-size: 10px;
-    gap: 3px;
-  }
-
-  .source-btn svg { display: none; }
-
-  /* v0.9.1 — Sélecteur de source retiré de la barre mobile ; remplacé par la
-     pastille cliquable qui ouvre le menu (sous-menu API + Simulation). */
-  #ctrlSource { display: none; }
+  /* v0.9.1 / C4 — Sélecteur de source entièrement retiré de la barre mobile ;
+     remplacé par la pastille cliquable qui ouvre le menu (sous-menu API + Simulation).
+     !important + ciblage direct de .source-selector = défense contre toute
+     spécificité ou cache résiduel. Les anciennes règles de compactage .source-btn
+     (vestiges d'avant P1) ont été supprimées : le bloc est masqué, elles étaient mortes. */
+  #ctrlSource,
+  .source-selector { display: none !important; }
   .source-pastille {
     display: inline-flex;
     align-items: center;
@@ -2549,10 +2544,7 @@ body {
     font-size: 16px;
   }
 
-  .source-btn {
-    padding: 4px 6px;
-    font-size: 9px;
-  }
+  /* (.source-btn compact <380px supprimé : sélecteur masqué sur mobile depuis P1) */
 
   .refresh-btn span,
   .refresh-btn {
