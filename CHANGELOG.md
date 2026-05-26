@@ -9,7 +9,7 @@ et ce projet suit le [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [0.9.1] - 2026-05-26
 
-Cycle de correctifs UX mobile post-test iPhone 14 (diagnostic `DIAGNOSTIC_MOBILE_v0.9.1.md`, problèmes P1 à P4).
+Cycle de correctifs UX mobile (diagnostic `DIAGNOSTIC_MOBILE_v0.9.1.md`, problèmes P1 à P4) + ajustements après tests sur iPhone 14 (C1 à C4).
 
 ### Added
 - **Sous-menu « Choix API » interactif** dans le menu hamburger : sélection de la source (Banque Mondiale / USDA) directement depuis le menu sur mobile. Mode démo (Simulation) séparé par un `<hr>`, GDELT affiché en lecture seule (source d'actualités, pas un sélecteur de prix)
@@ -21,11 +21,15 @@ Cycle de correctifs UX mobile post-test iPhone 14 (diagnostic `DIAGNOSTIC_MOBILE
 - **Sélecteur de source retiré de la barre mobile** (`#ctrlSource` masqué `≤768px`, retiré de l'auto-débordement) ; il reste dans la barre en desktop
 - `setSource()` : état unique `App.state.source` synchronisant le sélecteur desktop et le menu mobile
 - Icône Simulation unifiée `🔬 → 🧪` (barre, badge, pastille, menu)
+- **C1** — la pastille d'API active ouvre le menu **avec focus sur la section « Sources de données »** (raccourci ergonomique)
+- **C2** — tooltip GrainTrack3D désactivé : **l'icône grisée elle-même déclenche la bulle** (le ⓘ séparé n'était pas remarqué) ; survol desktop + tap mobile, bénéficie du garde-fou `--tt-shift`
 
 ### Fixed
 - **Tooltips débordant du viewport** sur mobile (texte tronqué près des bords) : garde-fou de positionnement générique via la custom property CSS `--tt-shift` intégrée aux `transform` (bulle + flèche), centrage `translateX(-50%)` préservé. Couvre source, devise, période, tendance et GrainTrack3D
-- **Message GrainTrack3D désactivé invisible au tap** sur tactile (cf. ⓘ ci-dessus)
+- **Message GrainTrack3D désactivé invisible au tap** sur tactile (cf. C2 ci-dessus)
 - **Contraste insuffisant en mode sombre sur la page Sources** (P4) : couleurs codées en dur (`#444`, `#555`, `#4C1D95`, `#6D28D9`) remplacées par `var(--black)` / `var(--terracotta)` — ratio dark mode ~1.7:1 → ~13:1 (WCAG AA)
+- **C3** — contraste de l'alerte déclenchée illisible en mode sombre : fond rose clair fixe (`#FEF2F2`) + texte clair (`var(--black)`) → override `[data-theme="dark"] .alert-card.triggered` avec fond rouge sombre translucide (texte lisible, WCAG AA). Light mode inchangé
+- **C4** — boutons du sélecteur API encore visibles en portrait mobile : masquage durci `#ctrlSource, .source-selector { display: none !important }` dans `@media ≤768px` (double verrou anti-spécificité/cache, ciblage direct), + nettoyage des règles `.source-btn` de compactage mobile devenues mortes. Desktop intact
 
 ### Security
 - Tooltip GrainTrack3D et pastille construits en `createElement`/`textContent` (zéro `innerHTML`) ; `rel="noopener noreferrer"` conservé sur le lien externe ; whitelist de la valeur de source dans `setSource()`
