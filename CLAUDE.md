@@ -4,7 +4,7 @@
 
 **GrainWatch** est une application web mono-page (SPA) de suivi en temps réel des prix des matières premières agricoles. Déployée sur GitHub Pages, elle ne nécessite aucun backend et consomme exclusivement des APIs publiques gratuites.
 
-- **Version actuelle** : 0.9.0 (26 mai 2026)
+- **Version actuelle** : 0.9.1 (26 mai 2026)
 - **URL de production** : https://grainwatch.vercel.app/ (déploiement actuel via Vercel)
 - **Stack** : Vanilla JS / HTML5 / CSS3 / Chart.js — Hébergement statique pur
 - **Hébergement** : Vercel en production. Le sous-dossier `site/` est conservé pour un déploiement GitHub Pages alternatif (cf. `DEPLOY_GITHUB.md`).
@@ -204,6 +204,7 @@ Une page /privacy minimaliste doit être créée et liée dans le footer.
 
 | Version | Date       | Nouveautés principales                                           |
 |---------|------------|------------------------------------------------------------------|
+| 0.9.1   | 26/05/2026 | Correctifs UX mobile post-test iPhone 14 (P1-P4) : sélecteur de source déplacé de la barre vers un sous-menu API interactif dans le hamburger (Banque Mondiale/USDA + Simulation séparée par `<hr>` + GDELT lecture seule), pastille d'API active (`#sourcePastille`) ; garde-fou anti-débordement viewport des tooltips (custom property `--tt-shift` dans les `transform`, flèche compensée) ; ⓘ tactile pour l'icône GrainTrack3D désactivée (le `title` natif ne s'affichait pas au tap) ; contraste page Sources en dark mode (`#444`/`#555`/`#4C1D95`/`#6D28D9` → `var(--black)`/`var(--terracotta)`, WCAG AA) ; icône Simulation `🔬→🧪`. `setSource()` = état unique synchronisant barre desktop ↔ menu mobile |
 | 0.9.0   | 26/05/2026 | Refonte UX mobile : tooltips tactiles (indicateur ⓘ, `@media (hover:none)`, tap-to-show), menu hamburger (panneau latéral À propos/Sources/Réglages, focus trap), débordement auto de la barre d'outils (`ResizeObserver`, déplacement de nœuds), footer mobile allégé. Sécurité : polices auto-hébergées (`/fonts`, suppression Google Fonts), CSP resserrée `font-src 'self'` (meta + `vercel.json`) |
 | 0.8.2   | 25/05/2026 | Lien inter-app GrainTrack3D (icône globe, 3 états actif/désactivé/masqué, 12 céréales supportées via `?grain=<key>`), unité sucre `c/kg` → `¢/kg`, lisibilité tooltips en dark mode (`.tooltip-bubble`/`.tooltip-arrow`/`.trend-tooltip`), bump version footer |
 | 0.8.1   | 21/05/2026 | Security hardening : XSS GDELT, meta CSP, SRI CDN, innerHTML §5 (historique alertes, source badge), validation inputs alertes (whitelist type + bornes), désérialisation localStorage défensive (alerts/favorites/visible/theme), radix 10 parseInt, filtrage console.* (.message uniquement) |
