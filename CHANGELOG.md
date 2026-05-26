@@ -30,6 +30,7 @@ Cycle de correctifs UX mobile (diagnostic `DIAGNOSTIC_MOBILE_v0.9.1.md`, problè
 - **Contraste insuffisant en mode sombre sur la page Sources** (P4) : couleurs codées en dur (`#444`, `#555`, `#4C1D95`, `#6D28D9`) remplacées par `var(--black)` / `var(--terracotta)` — ratio dark mode ~1.7:1 → ~13:1 (WCAG AA)
 - **C3** — contraste de l'alerte déclenchée illisible en mode sombre : fond rose clair fixe (`#FEF2F2`) + texte clair (`var(--black)`) → override `[data-theme="dark"] .alert-card.triggered` avec fond rouge sombre translucide (texte lisible, WCAG AA). Light mode inchangé
 - **C4** — boutons du sélecteur API encore visibles en portrait mobile : masquage durci `#ctrlSource, .source-selector { display: none !important }` dans `@media ≤768px` (double verrou anti-spécificité/cache, ciblage direct), + nettoyage des règles `.source-btn` de compactage mobile devenues mortes. Desktop intact
+- **C4-bis** — le CSS `!important` (C4) ne suffisait pas sous Safari iOS (cache/rendu WebKit) : ajout d'une bretelle JS `App.enforceSourceHiding()` pilotée par `matchMedia('(max-width: 768px)')` qui force le `display` inline de `#ctrlSource` (masqué en mobile, restauré en desktop) et de la pastille, avec écoute des changements d'orientation. Double verrouillage CSS + JS
 
 ### Security
 - Tooltip GrainTrack3D et pastille construits en `createElement`/`textContent` (zéro `innerHTML`) ; `rel="noopener noreferrer"` conservé sur le lien externe ; whitelist de la valeur de source dans `setSource()`
