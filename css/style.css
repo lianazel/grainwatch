@@ -3079,7 +3079,7 @@ body {
 .sources-text {
   font-size: 15px;
   line-height: 1.7;
-  color: #444;
+  color: var(--black);
   margin-bottom: 12px;
 }
 
@@ -3187,11 +3187,11 @@ body {
 .sources-gdelt-desc .sources-text {
   margin-bottom: 0;
   font-size: 14px;
-  color: #4C1D95;
+  color: var(--black);
 }
 
 .sources-gdelt-desc .sources-text strong {
-  color: #6D28D9;
+  color: var(--terracotta);
 }
 
 .sources-api-btn.loading {
@@ -3210,7 +3210,7 @@ body {
 
 /* Link in source badge */
 .sources-link {
-  color: #555;
+  color: var(--black);
   font-weight: 600;
   text-decoration: underline;
   text-decoration-style: dotted;
