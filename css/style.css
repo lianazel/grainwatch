@@ -2268,16 +2268,33 @@ body {
     font-size: 18px;
   }
 
+  /* C6 — masqué en mobile : libère de l'espace dans .header-left (qui ne rétrécit
+     pas, flex:0 0 auto) pour limiter la pression de débordement sur .header-right.
+     L'info de fraîcheur reste disponible dans le badge source (page/menu Sources). */
   .update-time {
-    font-size: 10px;
+    display: none;
   }
 
   .header-right {
     gap: 6px;
     flex-wrap: nowrap;
-    justify-content: flex-end;
+    /* C6 — `justify-content: flex-end` RETIRÉ : en LTR il faisait déborder le
+       contenu vers la GAUCHE, et scrollWidth ne mesure pas l'overflow côté start
+       → la détection de débordement de relayout() (scrollWidth > clientWidth)
+       restait toujours fausse → aucun contrôle déplacé dans le menu (S1/S2).
+       L'alignement à droite est désormais assuré par le spacer ::before ci-dessous,
+       qui laisse le débordement repartir vers la DROITE (scrollWidth fiable). */
     flex: 1;
     min-width: 0; /* permet la mesure de débordement (scrollWidth > clientWidth) */
+  }
+
+  /* Spacer flex : absorbe l'espace libre et pousse les contrôles à droite quand
+     tout tient ; se réduit à 0 dès que ça déborde, laissant les enfants déborder
+     vers la droite (donc détectable par scrollWidth). Non ciblé par `.header-right > *`
+     (le combinateur enfant ne matche pas les pseudo-éléments) → garde son flex-shrink. */
+  .header-right::before {
+    content: '';
+    flex: 1 1 0;
   }
 
   /* Pas de compression : largeur naturelle conservée pour détecter le débordement */

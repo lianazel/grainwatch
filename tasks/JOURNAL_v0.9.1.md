@@ -208,3 +208,12 @@ Le CSS `!important` (C4) n'a pas suffi : Safari iOS continuait d'afficher `#ctrl
 - [x] **Conformité** : zéro `innerHTML`/donnée externe ; ne touche que `display` → neutre dark mode.
 - [x] **Synchro `site/`** : `js/app.js` → `site/js/app.js` (`node --check` OK sur les deux).
 - _Reste à valider_ : test device réel (vider cache Safari) — pas de navigateur en env de dev.
+
+### Fait — C6 : toolbar overflow cassé par flex-end (26/05/2026)
+Diagnostic (lecture seule) `tasks/RAPPORT_DIAGNOSTIC_C6_TOOLBAR_MOBILE_v1.md` → correctif `tasks/RAPPORT_CORRECTIF_C6_TOOLBAR_OVERFLOW_v1.md`. Cause racine **unique** des symptômes toolbar mobile.
+- [x] **Cause racine** : `.header-right { justify-content: flex-end }` (`css/style.css:2278`) faisait déborder le contenu vers la **gauche** en LTR. `scrollWidth` ne mesurant pas l'overflow côté start, la condition `scrollWidth > clientWidth` de `relayout()` (`app.js:1248`) restait **toujours fausse** → `moved=0` → aucun contrôle déplacé dans le menu (S1). Les éléments débordant à gauche se peignaient par-dessus le logo (S2, `#sourcePastille` 1ᵉʳ enfant visible). S3 (clic pastille → menu) = comportement voulu C1, non touché.
+- [x] **Fix Option A (CSS, zéro JS)** : retrait de `justify-content: flex-end` + spacer `.header-right::before { content:''; flex:1 1 0 }`. Le spacer pousse les contrôles à droite quand tout tient, et se réduit à 0 au débordement → overflow vers la **droite** → `scrollWidth` redevient fiable → `relayout()` déplace enfin les contrôles. Spacer non ciblé par `.header-right > * { flex-shrink:0 }` (pseudo-élément non matché par le combinateur enfant).
+- [x] **Bonus** : `.update-time` → `display:none` en mobile (libère l'espace de `.header-left` qui ne rétrécit pas).
+- [x] **Scope** : les 2 modifs sont dans `@media (max-width:768px)` → desktop intact (alignement via `.header { justify-content: space-between }`). Neutre dark mode (layout only). Accolades CSS équilibrées (622/622).
+- [x] **Synchro `site/`** : `css/style.css` → `site/css/style.css`.
+- _Reste à valider_ : runtime device (iPhone 14 portrait, Chrome + Safari iOS) — pas de navigateur en env de dev. Repli Option B (mesure JS par somme `offsetWidth`) documenté dans le rapport si A échoue.
