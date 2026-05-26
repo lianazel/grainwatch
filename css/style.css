@@ -1023,7 +1023,8 @@ body {
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
-  transform: translateX(-50%);
+  /* --tt-shift : décalage anti-débordement viewport (P2), 0px par défaut. */
+  transform: translateX(calc(-50% + var(--tt-shift, 0px)));
   background: var(--white);
   border: 2px solid var(--olive);
   border-radius: var(--radius-sm);
@@ -1136,7 +1137,9 @@ body {
   position: absolute;
   top: calc(100% + 10px);
   left: 50%;
-  transform: translateX(-50%);
+  /* --tt-shift : décalage anti-débordement viewport posé par _clampTooltip (P2).
+     0px par défaut → centrage inchangé. La flèche compense via -var(--tt-shift). */
+  transform: translateX(calc(-50% + var(--tt-shift, 0px)));
   background: var(--black);
   color: #F5F0E5;
   font-size: 12px;
@@ -1166,7 +1169,8 @@ body {
   position: absolute;
   top: -6px;
   left: 50%;
-  transform: translateX(-50%);
+  /* Compense le décalage de la bulle (P2) pour rester pointée sur le déclencheur. */
+  transform: translateX(calc(-50% - var(--tt-shift, 0px)));
   width: 12px;
   height: 6px;
   clip-path: polygon(50% 0, 0 100%, 100% 100%);
@@ -1176,25 +1180,25 @@ body {
 /* Arrow from the left variant (for inline tooltips in content area) */
 .inline-tooltip .tooltip-bubble {
   left: 0;
-  transform: translateX(0);
+  transform: translateX(var(--tt-shift, 0px));
 }
 
 .inline-tooltip .tooltip-arrow {
   left: 24px;
-  transform: none;
+  transform: translateX(calc(-1 * var(--tt-shift, 0px)));
 }
 
 /* Header tooltips: keep them from overflowing right edge */
 .header-right .tooltip-bubble {
   left: auto;
   right: 0;
-  transform: none;
+  transform: translateX(var(--tt-shift, 0px));
 }
 
 .header-right .tooltip-arrow {
   left: auto;
   right: 20px;
-  transform: none;
+  transform: translateX(calc(-1 * var(--tt-shift, 0px)));
 }
 
 /* Show on hover (souris) OU au tap via .tooltip-open (tactile, posée par js/app.js) */
@@ -1304,6 +1308,10 @@ body {
   background: #8eff8e;
   box-shadow: 0 0 4px rgba(100, 255, 100, 0.5);
 }
+
+/* Pastille API active — indicateur mobile (le sélecteur complet vit dans le menu).
+   Masquée en desktop : la barre y affiche le sélecteur .source-selector complet. */
+.source-pastille { display: none; }
 
 /* ============================================================
    SOURCE BADGE (under chart)
@@ -2283,6 +2291,27 @@ body {
   }
 
   .source-btn svg { display: none; }
+
+  /* v0.9.1 — Sélecteur de source retiré de la barre mobile ; remplacé par la
+     pastille cliquable qui ouvre le menu (sous-menu API + Simulation). */
+  #ctrlSource { display: none; }
+  .source-pastille {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--grey-lighter);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .source-pastille:active { background: var(--creme-dark); }
 
   .currency-btn {
     padding: 4px 8px;
@@ -3863,6 +3892,29 @@ body {
   stroke-width: 2.2;
 }
 
+/* P3 v0.9.1 — ⓘ tactile adjacent à l'icône GrainTrack3D désactivée.
+   Desktop : le title natif du lien suffit au survol → wrap masqué.
+   Tactile : on affiche un ⓘ qui révèle le message au tap (le title natif
+   ne s'affiche jamais au tap). Réutilise .selector-with-tooltip + clamp P2. */
+.graintrack3d-info { display: none; }
+
+@media (hover: none) {
+  .graintrack3d-info {
+    display: inline-flex;
+    position: relative;
+    align-self: center;
+    margin-right: 4px;
+  }
+  /* L'ⓘ est l'élément principal du wrap (pas un badge en coin) → flux normal. */
+  .graintrack3d-info .tooltip-info {
+    position: static;
+    top: auto;
+    right: auto;
+    width: 20px;
+    height: 20px;
+  }
+}
+
 /* ── État DÉSACTIVÉ — denrée non couverte par GrainTrack3D ─────────────────
    Volontairement SANS pointer-events:none : le hover natif (title attribute)
    doit pouvoir s'afficher pour expliquer pourquoi l'icône est éteinte.
@@ -4074,6 +4126,59 @@ body {
 }
 .menu-source-status { font-size: 12px; color: var(--grey); white-space: nowrap; }
 .menu-source-online { color: var(--olive); font-weight: 600; }
+
+/* v0.9.1 — Sous-menu « Choix API » interactif (sélection de source depuis le menu) */
+.menu-subsection-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--grey);
+  margin: 0 0 8px;
+}
+.menu-api-list { display: flex; flex-direction: column; gap: 6px; }
+.menu-api-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--black);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.menu-api-btn .menu-source-name { display: flex; align-items: center; gap: 6px; }
+.menu-api-btn:hover { background: var(--grey-lighter); }
+.menu-api-btn.active {
+  border-color: var(--olive);
+  background: rgba(107, 124, 45, 0.10);
+}
+/* Mode démo : visuellement distinct des vraies APIs (séparé par le <hr>) */
+.menu-source-separator {
+  border: none;
+  border-top: 1px solid var(--grey);
+  opacity: 0.35;
+  margin: 12px 0;
+}
+.menu-api-btn--demo .menu-source-status { color: var(--ble); font-weight: 600; }
+/* GDELT — affichage informatif non interactif (source d'actualités, pas de prix) */
+.menu-source-readonly {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--black);
+  padding: 8px 10px;
+  margin-top: 6px;
+}
 .menu-link-btn {
   margin-top: 12px;
   width: 100%;

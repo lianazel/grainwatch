@@ -167,18 +167,11 @@ const App = {
       });
     });
 
-    // Source buttons
-    document.querySelectorAll('.source-btn').forEach(btn => {
+    // Sélection de source — boutons de la barre (desktop) ET items du menu (mobile).
+    // Les deux UI partagent App.state.source comme source de vérité unique.
+    document.querySelectorAll('.source-btn, .menu-api-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.state.source = btn.dataset.source;
-        this.updateSourceBadge();
-        this.updateSourceTooltip();
-        this._updateExportVisibility();
-        // Clear cache when switching source
-        GrainWatchAPI._cache = {};
-        this.refresh();
+        if (btn.dataset.source) this.setSource(btn.dataset.source);
       });
     });
 
@@ -417,17 +410,22 @@ const App = {
           gt3dLink.style.display = 'inline-flex';
           gt3dLink.classList.remove('graintrack3d-link--disabled');
           gt3dLink.removeAttribute('aria-disabled');
+          this._removeGrainTrack3DInfo();
         } else if (selectedCommodity) {
           gt3dLink.href = '#';
+          // title natif conservé pour desktop/lecteurs d'écran ; sur mobile il
+          // ne s'affiche jamais au tap → on ajoute un ⓘ tactile (cf. _showGrainTrack3DInfo).
           gt3dLink.title = I18N.t('graintrack3d_tooltip_disabled');
           gt3dLink.style.display = 'inline-flex';
           gt3dLink.classList.add('graintrack3d-link--disabled');
           gt3dLink.setAttribute('aria-disabled', 'true');
+          this._showGrainTrack3DInfo(I18N.t('graintrack3d_tooltip_disabled'));
         } else {
           gt3dLink.style.display = 'none';
           gt3dLink.href = '#';
           gt3dLink.classList.remove('graintrack3d-link--disabled');
           gt3dLink.removeAttribute('aria-disabled');
+          this._removeGrainTrack3DInfo();
         }
       }
 
@@ -554,6 +552,25 @@ const App = {
   },
 
   // --------------------------------------------------------
+  // SOURCE SELECTION (barre desktop + menu mobile, état unique)
+  // --------------------------------------------------------
+  setSource(source) {
+    // Whitelist : ne jamais accepter une valeur forgée via un DOM altéré.
+    if (!['worldbank', 'usda', 'simulated'].includes(source)) return;
+    this.state.source = source;
+    // Synchronise l'état actif sur les deux représentations (barre + menu)
+    document.querySelectorAll('.source-btn, .menu-api-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.source === source);
+    });
+    this.updateSourceBadge();      // met aussi à jour la pastille mobile
+    this.updateSourceTooltip();
+    this._updateExportVisibility();
+    GrainWatchAPI._cache = {};     // vide le cache au changement de source
+    this.refresh();
+    this.closeMenu();              // referme le menu après sélection (no-op si fermé)
+  },
+
+  // --------------------------------------------------------
   // SOURCE BADGE
   // --------------------------------------------------------
   updateSourceBadge() {
@@ -596,6 +613,14 @@ const App = {
     sourcesLink.id = 'openSourcesPage';
     sourcesLink.textContent = I18N.t("sources_link");
     badge.appendChild(sourcesLink);
+
+    // Pastille API active (mobile) — reflète la source courante dans la barre.
+    const pastille = document.getElementById('sourcePastille');
+    if (pastille) {
+      pastille.textContent = info.icon;
+      pastille.setAttribute('aria-label', `${I18N.t("menu_sources")} : ${sourceName}`);
+      pastille.title = sourceName;
+    }
   },
 
   updateSourceTooltip() {
@@ -954,7 +979,7 @@ const App = {
     // Source buttons text
     const sourceButtons = document.querySelectorAll('.source-btn');
     const sourceLabels = ["source_worldbank", "source_usda", "source_simulation"];
-    const sourceIcons = ["🏛️", "🇺🇸", "🔬"];
+    const sourceIcons = ["🏛️", "🇺🇸", "🧪"];
     sourceButtons.forEach((btn, i) => {
       if (sourceLabels[i]) {
         btn.innerHTML = `<span class="source-dot"></span> ${sourceIcons[i]} ${I18N.t(sourceLabels[i])}`;
@@ -989,6 +1014,7 @@ const App = {
         if (!wasOpen) {
           wrapper.classList.add('tooltip-open');
           infoBtn.setAttribute('aria-expanded', 'true');
+          this._clampTooltip(wrapper);   // garde-fou anti-débordement viewport (P2)
         }
         return;
       }
@@ -1008,7 +1034,74 @@ const App = {
       el.classList.remove('tooltip-open');
       const btn = el.querySelector('.tooltip-info');
       if (btn) btn.setAttribute('aria-expanded', 'false');
+      // Réinitialise le décalage anti-débordement (P2) pour la prochaine ouverture.
+      const bubble = el.querySelector('.tooltip-bubble, .trend-tooltip');
+      if (bubble) bubble.style.removeProperty('--tt-shift');
     });
+  },
+
+  // Garde-fou P2 : empêche une bulle de tooltip de déborder du viewport sur mobile.
+  // Mesure la position réelle puis pose --tt-shift (px) ; la bulle ET sa flèche
+  // réagissent via calc() en CSS, sans casser le centrage translateX(-50%).
+  _clampTooltip(wrapper) {
+    const bubble = wrapper.querySelector('.tooltip-bubble, .trend-tooltip');
+    if (!bubble) return;
+    bubble.style.removeProperty('--tt-shift');   // mesure depuis la position de base
+    const rect = bubble.getBoundingClientRect();
+    const margin = 8;
+    let dx = 0;
+    if (rect.left < margin) {
+      dx = margin - rect.left;
+    } else if (rect.right > window.innerWidth - margin) {
+      dx = window.innerWidth - margin - rect.right;
+    }
+    if (dx !== 0) bubble.style.setProperty('--tt-shift', `${Math.round(dx)}px`);
+  },
+
+  // P3 : ⓘ tactile pour l'icône GrainTrack3D désactivée. Le title natif ne
+  // s'affiche jamais au tap sur mobile ; on réutilise le système maison
+  // (.selector-with-tooltip → délégation _initTouchTooltips + clamp P2).
+  // Construction DOM en createElement/textContent (zéro innerHTML — sécurité).
+  _showGrainTrack3DInfo(message) {
+    const link = document.getElementById('graintrack3d-link');
+    if (!link || !link.parentNode) return;
+    let wrap = document.getElementById('gt3dInfo');
+    if (!wrap) {
+      wrap = document.createElement('span');
+      wrap.className = 'selector-with-tooltip graintrack3d-info';
+      wrap.id = 'gt3dInfo';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tooltip-info';
+      btn.setAttribute('aria-expanded', 'false');
+      btn.textContent = 'ⓘ';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'tooltip-bubble';
+      bubble.setAttribute('role', 'tooltip');
+      const icon = document.createElement('span');
+      icon.className = 'tooltip-icon';
+      icon.textContent = '🌍';
+      const txt = document.createElement('span');
+      txt.className = 'gt3d-info-text';
+      const arrow = document.createElement('div');
+      arrow.className = 'tooltip-arrow';
+      bubble.appendChild(icon);
+      bubble.appendChild(txt);
+      bubble.appendChild(arrow);
+
+      wrap.appendChild(btn);
+      wrap.appendChild(bubble);
+      link.parentNode.insertBefore(wrap, link.nextSibling);
+    }
+    wrap.querySelector('.tooltip-info').setAttribute('aria-label', message);
+    wrap.querySelector('.gt3d-info-text').textContent = message;
+  },
+
+  _removeGrainTrack3DInfo() {
+    const wrap = document.getElementById('gt3dInfo');
+    if (wrap) wrap.remove();
   },
 
   // --------------------------------------------------------
@@ -1036,6 +1129,10 @@ const App = {
     toggle.addEventListener('click', () => this.openMenu());
     if (closeBtn) closeBtn.addEventListener('click', () => this.closeMenu());
     overlay.addEventListener('click', () => this.closeMenu());
+
+    // Pastille API active (mobile) → ouvre le menu (le sélecteur de source y vit)
+    const pastille = document.getElementById('sourcePastille');
+    if (pastille) pastille.addEventListener('click', () => this.openMenu());
 
     // « En savoir plus » → page Sources existante
     if (moreBtn) {
@@ -1114,14 +1211,15 @@ const App = {
     if (!headerRight || !menuSettings || !hamburger) return;
 
     // Ordre DOM d'origine (restauration) ; PRIORITY = ordre de retrait (1er part en premier)
-    const ORIGINAL = ['#ctrlSource', '#ctrlCurrency', '#themeToggle', '#langToggle', '#alertsBell', '#refreshBtn'];
+    // #ctrlSource n'y figure plus (v0.9.1) : masqué sur mobile, son rôle est repris
+    // par le sous-menu API du hamburger + la pastille. Il reste dans la barre en desktop.
+    const ORIGINAL = ['#ctrlCurrency', '#themeToggle', '#langToggle', '#alertsBell', '#refreshBtn'];
     const PRIORITY = [
       { sel: '#refreshBtn',   key: 'menu_label_refresh'  },
       { sel: '#alertsBell',   key: 'menu_label_alerts'   },
       { sel: '#themeToggle',  key: 'menu_label_theme'    },
       { sel: '#langToggle',   key: 'menu_label_lang'     },
       { sel: '#ctrlCurrency', key: 'menu_label_currency' },
-      { sel: '#ctrlSource',   key: 'menu_label_source'   },
     ];
 
     const relayout = () => {

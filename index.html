@@ -55,10 +55,15 @@
             <span class="source-dot"></span> 🇺🇸 USDA
           </button>
           <button class="source-btn" data-source="simulated" title="Données simulées">
-            <span class="source-dot"></span> 🔬 Simulation
+            <span class="source-dot"></span> 🧪 Simulation
           </button>
         </div>
       </div>
+
+      <!-- Pastille API active — mobile uniquement. Le sélecteur complet vit dans
+           le menu hamburger sur mobile ; la barre n'affiche qu'un indicateur
+           cliquable (ouvre le menu). Mise à jour par updateSourceBadge(). -->
+      <button type="button" class="source-pastille" id="sourcePastille" aria-label="Source de données active">🏛️</button>
 
       <!-- CURRENCY SELECTOR -->
       <div class="selector-with-tooltip" id="ctrlCurrency">
@@ -582,15 +587,36 @@
       <div class="menu-settings" id="menuSettings"><!-- contrôles déplacés ici par setupToolbarOverflow() --></div>
     </section>
 
-    <!-- Section: Sources de données -->
+    <!-- Section: Sources de données — sélecteur API interactif (mobile = point d'accès principal) -->
     <section class="menu-section">
       <h3 class="menu-section-title" data-i18n="menu_sources">Sources de données</h3>
-      <ul class="menu-sources">
-        <li><span class="menu-source-name">🏛️ <span data-i18n="source_worldbank">Banque Mondiale</span></span><span class="menu-source-status menu-source-online" data-i18n="menu_status_online">● En ligne</span></li>
-        <li><span class="menu-source-name">🇺🇸 <span data-i18n="source_usda">USDA</span></span><span class="menu-source-status menu-source-online" data-i18n="menu_status_online">● En ligne</span></li>
-        <li><span class="menu-source-name">🌍 GDELT</span><span class="menu-source-status menu-source-online" data-i18n="menu_status_online">● En ligne</span></li>
-        <li><span class="menu-source-name">🔬 <span data-i18n="source_simulation">Simulation</span></span><span class="menu-source-status" data-i18n="menu_status_always">Toujours disponible</span></li>
-      </ul>
+
+      <h4 class="menu-subsection-title" data-i18n="menu_api_choice">Choix API</h4>
+      <div class="menu-api-list">
+        <button type="button" class="menu-api-btn active" data-source="worldbank">
+          <span class="menu-source-name">🏛️ <span data-i18n="source_worldbank">Banque Mondiale</span></span>
+          <span class="menu-source-status menu-source-online" data-i18n="menu_status_online">● En ligne</span>
+        </button>
+        <button type="button" class="menu-api-btn" data-source="usda">
+          <span class="menu-source-name">🇺🇸 <span data-i18n="source_usda">USDA</span></span>
+          <span class="menu-source-status menu-source-online" data-i18n="menu_status_online">● En ligne</span>
+        </button>
+      </div>
+
+      <!-- Séparateur : Simulation n'est PAS une API, c'est un mode démo local -->
+      <hr class="menu-source-separator">
+
+      <button type="button" class="menu-api-btn menu-api-btn--demo" data-source="simulated">
+        <span class="menu-source-name">🧪 <span data-i18n="menu_demo_mode">Mode démo (Simulation)</span></span>
+        <span class="menu-source-status" data-i18n="menu_status_always">Toujours disponible</span>
+      </button>
+
+      <!-- GDELT — source d'actualités géopolitiques (lecture seule, pas un sélecteur de prix) -->
+      <div class="menu-source-readonly">
+        <span class="menu-source-name">🌍 GDELT</span>
+        <span class="menu-source-status menu-source-online" data-i18n="menu_status_online">● En ligne</span>
+      </div>
+
       <button class="menu-link-btn" id="menuSourcesMore" data-i18n="menu_sources_more">En savoir plus</button>
     </section>
 

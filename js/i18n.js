@@ -100,6 +100,8 @@ const I18N = {
     "menu_close_label":    { fr: "Fermer le menu", en: "Close menu" },
     "menu_settings":       { fr: "Réglages", en: "Settings" },
     "menu_sources":        { fr: "Sources de données", en: "Data sources" },
+    "menu_api_choice":     { fr: "Choix API", en: "API choice" },
+    "menu_demo_mode":      { fr: "Mode démo (Simulation)", en: "Demo mode (Simulation)" },
     "menu_status_online":  { fr: "● En ligne", en: "● Online" },
     "menu_status_always":  { fr: "Toujours disponible", en: "Always available" },
     "menu_sources_more":   { fr: "En savoir plus", en: "Learn more" },

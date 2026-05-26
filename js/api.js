@@ -72,7 +72,7 @@ const SOURCE_INFO = {
     description: "Données générées par un algorithme (marche aléatoire avec retour à la moyenne). Les prix imitent un comportement de marché réaliste mais ne reflètent PAS les cours réels. Utile pour comprendre le fonctionnement de l'interface.",
     frequency: "Quotidienne (simulée)",
     url: null,
-    icon: "🔬",
+    icon: "🧪",
   },
 };
 
