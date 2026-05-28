@@ -9,11 +9,11 @@
 
 - **Version actuelle** : 0.9.1 (26 mai 2026)
 - **URL de production** : https://grainwatch.vercel.app/ (déploiement actuel via Vercel)
-- **Stack** : Vanilla JS / HTML5 / CSS3 / Chart.js — Hébergement statique pur
-- **Hébergement** : Vercel en production. Le sous-dossier `site/` est conservé pour un déploiement GitHub Pages alternatif (cf. `DEPLOY_GITHUB.md`).
-- **Codebase** : ~3 500 lignes de code, 10 modules JS
+- **Stack** : Vanilla JS / HTML5 / CSS3 / Chart.js — front statique + **1 Vercel Serverless Function** (`api/gdelt.js`, depuis C9)
+- **Hébergement** : Vercel en production. Le sous-dossier `site/` est conservé pour un déploiement GitHub Pages alternatif (cf. `DEPLOY_GITHUB.md`). ⚠️ Le fallback GitHub Pages **ne supporte pas** `api/` (pas de serverless) → le panneau géopolitique n'y fonctionnera pas.
+- **Codebase** : ~3 500 lignes de code, 10 modules JS + 1 fonction serverless
 - **Auteur** : lianazel
-- Aucun backend, aucun compte utilisateur, aucune clé API dans le code
+- **Plus 100 % statique depuis C9** : une unique Serverless Function (`api/gdelt.js`) sert de proxy CORS vers GDELT. Toujours : aucun compte utilisateur, aucune clé API, aucun secret dans le code.
 
 ### Palette couleurs
 | Nom        | Hex       | Usage                     |
@@ -33,13 +33,16 @@ Si un choix manuel existe, les changements de l'OS sont ignorés.
 ```
 GrainWatch/
 ├── index.html              # Page principale (SPA)
+├── api/                    # Vercel Serverless Functions (NON statique)
+│   └── gdelt.js            # Proxy CORS vers GDELT (C9) — pas copié dans site/
 ├── css/                    # Feuilles de style (variables, dark mode)
 ├── js/                     # 10 modules JS (1 par domaine fonctionnel)
 │   ├── app.js              # Point d'entrée, initialisation
 │   ├── chart.js            # Graphiques Chart.js (adapte couleurs dark/light)
 │   ├── alerts.js           # Système d'alertes de prix
+│   ├── news.js             # Panneau géopolitique GDELT (via proxy /api/gdelt)
 │   ├── ...                 # Autres modules fonctionnels
-├── site/                   # Sous-dossier déployé sur GitHub Pages
+├── site/                   # Sous-dossier déployé sur GitHub Pages (sans api/)
 ├── tasks/                  # Journal détaillé, rapports, leçons, todo
 ├── DEPLOY_GITHUB.md        # Procédure de déploiement
 ├── README.md               # Documentation publique
@@ -51,7 +54,10 @@ GrainWatch/
 - **USDA FAS API** : données USDA sur les marchés agricoles internationaux
 - **GDELT API v2** : actualités géopolitiques impactant les marchés
 
-**Contrainte CORS** : les APIs Banque Mondiale et USDA sont bloquées par CORS depuis un navigateur. La page Sources affiche actuellement des données d'exemple avec l'URL réelle copiable pour test manuel. Ne jamais contourner avec un proxy non audité.
+**Contrainte CORS** : les APIs Banque Mondiale, USDA et GDELT n'envoient pas d'`Access-Control-Allow-Origin` → bloquées en fetch direct depuis le navigateur.
+- **Banque Mondiale / USDA** : page Sources affiche des données d'exemple + URL réelle copiable pour test manuel (inchangé).
+- **GDELT (depuis C9)** : contourné par un **proxy first-party audité** `api/gdelt.js` (Vercel Serverless). Le front appelle `/api/gdelt` (même origine, donc pas de CORS), la fonction relaie côté serveur vers GDELT. **Pattern proxy** : hôte/chemin figés (pas de SSRF), whitelist stricte de paramètres (`query`, `mode`, `maxrecords`, `format`, `timespan`), validation `query` ≤ 500 car., aucun credential, timeout 10 s, cache Edge `s-maxage=900`.
+- ⚠️ La règle « jamais de proxy **non audité** » reste absolue. Le proxy GDELT est first-party, à code lisible et audité — c'est l'exception conforme, pas un contournement par service tiers.
 
 ### Fonctionnalités implémentées (v0.9.x)
 - Affichage des cours avec Chart.js (gradients adaptatifs dark/light)
@@ -228,7 +234,7 @@ Tout le dark mode est piloté par l'attribut `[data-theme]` sur `<html>` (`docum
 
 | Version | Date       | Résumé                                                                |
 |---------|------------|-----------------------------------------------------------------------|
-| 0.9.1   | 26/05/2026 | Refonte UX mobile (P1-P4) + correctifs post-test iPhone 14 (C1-C4, C4-bis) : sélecteur de source → sous-menu API + pastille `#sourcePastille`, garde-fou anti-débordement tooltips (`--tt-shift`), tooltip GrainTrack3D tactile, contraste dark mode (Sources + alerte déclenchée, WCAG AA), `setSource()` état unique barre↔menu, masquage forcé du sélecteur API via JS (`enforceSourceHiding()` / `matchMedia`) pour Safari iOS, fix overflow toolbar mobile (C6 : `justify-content:flex-end` cassait la détection `scrollWidth` → spacer `::before`), contraste input prix alertes dark mode (C5 : `background: var(--white)` + `::placeholder` manquants sur `.alerts-input`, WCAG AA), tooltip devise dynamique selon la monnaie active (C7 : clé i18n unique → `tooltip_currency_usd`/`tooltip_currency_eur` FR/EN, helper `updateCurrencyTooltip()` appelé à l'init + au clic devise + au changement de langue), panneau géopolitique GDELT réparé (C8 : requêtes `OR` non parenthésées → erreur texte HTTP 200 ; pattern ancre+groupe OR `wheat (price OR export OR …)`, retrait `sort=datedesc` → tri pertinence, parsing défensif `text()`+`JSON.parse` dans `news.js`) |
+| 0.9.1   | 26/05/2026 | Refonte UX mobile (P1-P4) + correctifs post-test iPhone 14 (C1-C4, C4-bis) : sélecteur de source → sous-menu API + pastille `#sourcePastille`, garde-fou anti-débordement tooltips (`--tt-shift`), tooltip GrainTrack3D tactile, contraste dark mode (Sources + alerte déclenchée, WCAG AA), `setSource()` état unique barre↔menu, masquage forcé du sélecteur API via JS (`enforceSourceHiding()` / `matchMedia`) pour Safari iOS, fix overflow toolbar mobile (C6 : `justify-content:flex-end` cassait la détection `scrollWidth` → spacer `::before`), contraste input prix alertes dark mode (C5 : `background: var(--white)` + `::placeholder` manquants sur `.alerts-input`, WCAG AA), tooltip devise dynamique selon la monnaie active (C7 : clé i18n unique → `tooltip_currency_usd`/`tooltip_currency_eur` FR/EN, helper `updateCurrencyTooltip()` appelé à l'init + au clic devise + au changement de langue), panneau géopolitique GDELT réparé (C8 : requêtes `OR` non parenthésées → erreur texte HTTP 200 ; pattern ancre+groupe OR `wheat (price OR export OR …)`, retrait `sort=datedesc` → tri pertinence, parsing défensif `text()`+`JSON.parse` dans `news.js`), **proxy CORS GDELT** (C9 : GDELT bloqué CORS en prod → 1ʳᵉ Serverless Function `api/gdelt.js`, front appelle `/api/gdelt` ; whitelist params, validation query ≤500, timeout 10 s, cache Edge 15 min ; GrainWatch n'est plus 100 % statique) |
 | 0.9.0   | 26/05/2026 | Refonte UX mobile : tooltips tactiles (ⓘ, `@media (hover:none)`), menu hamburger (focus trap), débordement auto barre d'outils (`ResizeObserver`), footer allégé. Polices auto-hébergées (`/fonts`), CSP `font-src 'self'` |
 | 0.8.2   | 25/05/2026 | Lien inter-app GrainTrack3D (icône globe, 3 états, 12 céréales via `?grain=<key>`), unité sucre `c/kg`→`¢/kg`, lisibilité tooltips dark mode |
 | 0.8.1   | 21/05/2026 | Security hardening : XSS GDELT, meta CSP, SRI CDN, innerHTML §5, validation inputs alertes, désérialisation localStorage défensive, radix 10 parseInt, filtrage console.* |

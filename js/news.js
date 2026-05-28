@@ -56,9 +56,10 @@ const NewsManager = {
 
     try {
       const query = encodeURIComponent(keywords);
+      // Proxy Vercel /api/gdelt (même origine) → contourne le blocage CORS de GDELT (C9).
       // sort omis volontairement → tri par pertinence (défaut GDELT) ; datedesc renvoyait
       // les articles les plus récents sans rapport avec la denrée (cf. diagnostic C8).
-      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${query}&mode=artlist&maxrecords=8&format=json&timespan=3months`;
+      const url = `/api/gdelt?query=${query}&mode=artlist&maxrecords=8&format=json&timespan=3months`;
 
       const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
