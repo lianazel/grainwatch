@@ -46,7 +46,7 @@ module.exports = async function handler(req, res) {
   const gdeltUrl = `${GDELT_ENDPOINT}?${params.toString()}`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000); // aligné sur news.js
+  const timeout = setTimeout(() => controller.abort(), 25000); // latence Vercel↔GDELT > 10s en prod (C9-bis)
   try {
     const response = await fetch(gdeltUrl, { signal: controller.signal });
     clearTimeout(timeout);
@@ -74,7 +74,7 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     clearTimeout(timeout);
     if (error.name === "AbortError") {
-      res.status(504).json({ error: "GDELT request timeout (10s)" });
+      res.status(504).json({ error: "GDELT request timeout (25s)" });
     } else {
       console.error("[GDELT Proxy] Erreur:", error.message || error);
       res.status(502).json({ error: "Failed to fetch from GDELT" });

@@ -252,3 +252,13 @@ Rapport : `RAPPORT_CORRECTIF_C9_PROXY_GDELT_v1.md`. **Changement d'architecture*
 - [x] **CLAUDE.md** : stack (« plus 100 % statique »), arbre fichiers (`api/`), contrainte CORS (pattern proxy first-party audité), historique versions.
 - _Reste à valider (post-déploiement, navigateur réel — pas d'env browser en dev)_ : T1 endpoint `/api/gdelt?...` → JSON ; T2/T3 panneau affiche des articles (Blé/Maïs/Riz) ; T4 console sans erreur CORS/JS ; T6 dark mode ; T7 « Actualités liées ». T5 (rejet params) validé localement.
 - _Observation_ : le bouton GDELT de la page Sources (`sources.js`) fait encore un `fetch` direct → même blocage CORS en prod ; pourrait être routé via `/api/gdelt` dans un futur correctif (hors périmètre C9).
+
+### Fait — C9-bis : timeout GDELT relevé end-to-end (28/05/2026)
+En prod, `/api/gdelt` renvoyait systématiquement `{"error":"GDELT request timeout (10s)"}` (latence Vercel↔GDELT > 10 s). Le prompt ne demandait que le timeout du proxy (10→25 s) ; **diagnostic** : 25 s seul aurait été inefficace car la chaîne était plafonnée à 10 s à **trois** endroits. Choix JC = **fix complet** (les 3 verrous).
+- [x] **Proxy `api/gdelt.js`** : `setTimeout(abort, 10000)` → `25000` ; message `(10s)` → `(25s)`.
+- [x] **Limite plateforme Vercel** : `vercel.json` → `"functions": { "api/gdelt.js": { "maxDuration": 30 } }`. Sans ça, la fonction (défaut Hobby ~10 s) serait tuée avant l'abort 25 s. 30 s couvre cold start + 25 s + réponse.
+- [x] **Abort navigateur `news.js:66`** : `AbortSignal.timeout(10000)` → `30000`. Sinon le navigateur abandonnait l'appel à `/api/gdelt` à 10 s, avant que le proxy (jusqu'à ~27 s) réponde. 30 s > réponse worst-case du proxy.
+- [x] **Chaîne cohérente** (inner→outer) : fetch proxy→GDELT **25 s** < maxDuration **30 s** ≈ abort navigateur **30 s** → le timeout interne du proxy se déclenche en premier et renvoie un 504 propre, reçu par le navigateur. En cas nominal (GDELT ~2-5 s), aucun de ces plafonds ne joue.
+- [x] **Synchro `site/`** : `js/news.js` recopié. `api/gdelt.js` et `vercel.json` non miroir (racine).
+- [x] **Vérifs** : `node --check` (news.js, api/gdelt.js) OK ; `vercel.json` JSON valide.
+- _Reste à valider (post-déploiement)_ : `/api/gdelt?query=…` ne timeout plus et renvoie le tableau `articles` ; panneau peuplé sur Blé/Maïs/Riz.

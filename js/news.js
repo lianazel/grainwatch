@@ -61,7 +61,9 @@ const NewsManager = {
       // les articles les plus récents sans rapport avec la denrée (cf. diagnostic C8).
       const url = `/api/gdelt?query=${query}&mode=artlist&maxrecords=8&format=json&timespan=3months`;
 
-      const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      // 30s : doit dépasser le timeout interne du proxy (25s) + cold start Vercel,
+      // sinon le navigateur abandonne avant que /api/gdelt ait répondu (C9-bis).
+      const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       // Parsing défensif : GDELT renvoie ses erreurs (syntaxe de requête, rate limit)
