@@ -3641,6 +3641,14 @@ body {
   font-family: var(--font-mono);
   font-size: 14px;
   color: var(--black);
+  /* Fond explicite obligatoire : sans lui le navigateur garde #FFF en dark,
+     rendant le texte clair (--black=#E8E4DB) illisible. Aligné sur .alerts-select. */
+  background: var(--white);
+}
+
+.alerts-input::placeholder {
+  color: var(--grey);
+  font-weight: 400;
 }
 
 .alerts-input:focus {
