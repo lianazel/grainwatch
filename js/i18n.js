@@ -82,9 +82,14 @@ const I18N = {
       fr: "D'où viennent les prix ? Choisissez l'organisme international qui fournit les données.",
       en: "Where do the prices come from? Choose the international organization that provides the data."
     },
-    "tooltip_currency":   {
-      fr: "Devise d'affichage. Les cours de base sont en dollars US, convertis selon le taux du jour.",
-      en: "Display currency. Base prices are in US dollars, converted at the current exchange rate."
+    // Tooltip devise — texte dynamique selon la devise active (cf. App.updateCurrencyTooltip)
+    "tooltip_currency_usd": {
+      fr: "Devise d'affichage. Les cours sont en dollars US (devise de référence des marchés).",
+      en: "Display currency. Prices are in US dollars (the markets' reference currency)."
+    },
+    "tooltip_currency_eur": {
+      fr: "Devise d'affichage. Les cours de base (USD) sont convertis en euros selon le taux du jour.",
+      en: "Display currency. Base prices (USD) are converted to euros at the current exchange rate."
     },
     "tooltip_period":     {
       fr: "Fenêtre temporelle du graphique. Plus la période est longue, plus vous voyez la tendance de fond.",

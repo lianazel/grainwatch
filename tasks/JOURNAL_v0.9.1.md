@@ -217,3 +217,13 @@ Diagnostic (lecture seule) `tasks/RAPPORT_DIAGNOSTIC_C6_TOOLBAR_MOBILE_v1.md` �
 - [x] **Scope** : les 2 modifs sont dans `@media (max-width:768px)` → desktop intact (alignement via `.header { justify-content: space-between }`). Neutre dark mode (layout only). Accolades CSS équilibrées (622/622).
 - [x] **Synchro `site/`** : `css/style.css` → `site/css/style.css`.
 - [x] **✅ Validé device** (iPhone 14, 27/05/2026) : toolbar correcte en portrait, débordement vers le menu fonctionnel, plus de chevauchement logo. C6 = succès. Repli Option B (mesure JS par somme `offsetWidth`) non nécessaire.
+
+### Fait — C7 : tooltip devise dynamique selon la monnaie active (28/05/2026)
+Rapport : `RAPPORT_CORRECTIF_C7_TOOLTIP_DEVISE_v1.md`. Le tooltip ⓘ devise affichait un texte statique (« cours de base en dollars US, convertis selon le taux du jour ») quelle que soit la devise — incohérent quand EUR est sélectionné.
+- [x] **Cause racine** : clé i18n unique `tooltip_currency` (`i18n.js`) fixée une seule fois par `applyTranslations()` (`app.js:990`), jamais ré-évaluée au changement de devise. Le tooltip était déjà traduit FR/EN mais pas piloté par `App.state.currency`.
+- [x] **i18n** : `tooltip_currency` scindée en `tooltip_currency_usd` (« Les cours sont en dollars US (devise de référence des marchés) ») et `tooltip_currency_eur` (« Les cours de base (USD) sont convertis en euros selon le taux du jour »), FR + EN.
+- [x] **Helper `App.updateCurrencyTooltip()`** (`app.js`, entre `updateLangButton` et `applyTranslations`) : choisit la clé selon `state.currency` et pose `#tooltipCurrencyText.textContent`. Appelé (a) à l'init et au changement de langue via `applyTranslations()` (remplace l'ancien set statique), (b) dans le handler de clic `.currency-btn` après mise à jour de `state.currency` → MAJ immédiate sans rechargement, devise ET langue prises en compte.
+- [x] **`index.html:73`** : fallback statique aligné sur la variante USD (devise par défaut).
+- [x] **Conformité** : zéro `innerHTML`, `textContent` sur strings internes (i18n) → XSS nul ; aucune modif CSS → dark mode neutre ; desktop + mobile (même `#tooltipCurrencyText`).
+- [x] **Vérifs** : `node --check` OK (i18n.js, app.js) ; 0 occurrence résiduelle de `tooltip_currency` ; synchro `site/` (`index.html`, `js/i18n.js`, `js/app.js`) confirmée par `diff -q`.
+- _Reste à valider_ : test device réel (tap ⓘ devise + bascule USD↔EUR et FR↔EN) — pas de navigateur en env de dev.

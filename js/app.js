@@ -163,6 +163,7 @@ const App = {
         document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.state.currency = btn.dataset.currency;
+        this.updateCurrencyTooltip();
         this.renderCommodityList();
         this.loadDetail();
       });
@@ -963,6 +964,15 @@ const App = {
     document.getElementById('langCode').textContent = I18N.lang.toUpperCase();
   },
 
+  // Tooltip devise : texte adapté à la devise active (USD = référence, EUR = converti depuis USD).
+  // Appelé à l'init via applyTranslations() et à chaque clic sur un bouton devise.
+  updateCurrencyTooltip() {
+    const el = document.getElementById('tooltipCurrencyText');
+    if (!el) return;
+    const key = this.state.currency === "EUR" ? "tooltip_currency_eur" : "tooltip_currency_usd";
+    el.textContent = I18N.t(key);
+  },
+
   applyTranslations() {
     // Translate all elements with data-i18n attribute
     document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -986,8 +996,7 @@ const App = {
     const tooltipSource = document.querySelector('#tooltipSource > span:not(.tooltip-icon)');
     if (tooltipSource) tooltipSource.textContent = I18N.t("tooltip_source");
 
-    const tooltipCurrencyText = document.getElementById('tooltipCurrencyText');
-    if (tooltipCurrencyText) tooltipCurrencyText.textContent = I18N.t("tooltip_currency");
+    this.updateCurrencyTooltip();
 
     const tooltipPeriod = document.querySelector('#tooltipPeriod > span:not(.tooltip-icon)');
     if (tooltipPeriod) tooltipPeriod.textContent = I18N.t("tooltip_period");
