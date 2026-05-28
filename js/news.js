@@ -3,35 +3,37 @@
 // Free, no API key, CORS-friendly
 // ============================================================
 
-// Search terms per commodity (English — GDELT indexes global press in EN)
+// Search terms per commodity (English — GDELT indexes global press in EN).
+// Syntaxe GDELT DOC 2.0 : ancre (hors parenthèses, AND implicite) + groupe OR parenthésé.
+// Un OR DOIT être entre (), et () ne peut contenir QUE des OR (pas de AND). Ancre multi-mots → quotée.
 const NEWS_KEYWORDS = {
-  wheat:     "wheat price OR wheat export OR wheat crisis OR wheat supply",
-  corn:      "corn price OR maize price OR corn export OR corn shortage",
-  rice:      "rice price OR rice export OR rice crisis OR rice supply",
-  soybean:   "soybean price OR soybean export OR soybean trade",
-  sugar:     "sugar price OR sugar production OR sugar shortage",
-  coffee:    "coffee price OR coffee crisis OR coffee production",
-  cocoa:     "cocoa price OR cocoa crisis OR chocolate price",
-  palm_oil:  "palm oil price OR palm oil deforestation OR palm oil export",
-  cotton:    "cotton price OR cotton production OR cotton trade",
-  barley:    "barley price OR barley export OR beer price barley",
-  oats:      "oats price OR oats production OR oats market",
-  sunflower: "sunflower oil price OR sunflower oil export OR sunflower ukraine",
+  wheat:     "wheat (price OR export OR harvest OR shortage OR tariff OR crop)",
+  corn:      "corn (price OR export OR harvest OR shortage OR tariff OR crop)",
+  rice:      "rice (price OR export OR harvest OR shortage OR tariff OR crop)",
+  soybean:   "soybean (price OR export OR harvest OR shortage OR tariff OR crop)",
+  sugar:     "sugar (price OR export OR harvest OR shortage OR tariff OR crop)",
+  coffee:    "coffee (price OR export OR harvest OR shortage OR tariff OR crop)",
+  cocoa:     "cocoa (price OR export OR harvest OR shortage OR tariff OR crop)",
+  palm_oil:  '"palm oil" (price OR export OR harvest OR shortage OR tariff OR crop)',
+  cotton:    "cotton (price OR export OR harvest OR shortage OR tariff OR crop)",
+  barley:    "barley (price OR export OR harvest OR shortage OR tariff OR crop)",
+  oats:      "oats (price OR export OR harvest OR shortage OR tariff OR crop)",
+  sunflower: '"sunflower oil" (price OR export OR harvest OR shortage OR tariff OR crop)',
   // Extended catalog
-  soybean_oil: "soybean oil price OR soybean oil export",
-  rapeseed:    "rapeseed price OR canola price OR rapeseed export",
-  rubber:      "rubber price OR natural rubber export OR rubber market",
-  tea:         "tea price OR tea production OR tea export",
-  orange:      "orange juice price OR citrus market OR orange production",
-  banana:      "banana price OR banana export OR banana production",
-  olive_oil:   "olive oil price OR olive oil crisis OR olive oil production",
-  sorghum:     "sorghum price OR sorghum production OR sorghum export",
-  coconut_oil: "coconut oil price OR coconut oil export",
-  wool:        "wool price OR wool production OR wool market",
-  tobacco:     "tobacco price OR tobacco production OR tobacco trade",
-  groundnut:   "groundnut price OR peanut price OR groundnut export",
-  lentils:     "lentils price OR lentil production OR pulse market",
-  millet:      "millet price OR millet production OR millet food security",
+  soybean_oil: '"soybean oil" (price OR export OR harvest OR shortage OR tariff OR crop)',
+  rapeseed:    "rapeseed (price OR export OR harvest OR shortage OR tariff OR crop)",
+  rubber:      "rubber (price OR export OR harvest OR shortage OR tariff OR crop)",
+  tea:         "tea (price OR export OR harvest OR shortage OR tariff OR crop)",
+  orange:      '"orange juice" (price OR export OR harvest OR shortage OR tariff OR crop)',
+  banana:      "banana (price OR export OR harvest OR shortage OR tariff OR crop)",
+  olive_oil:   '"olive oil" (price OR export OR harvest OR shortage OR tariff OR crop)',
+  sorghum:     "sorghum (price OR export OR harvest OR shortage OR tariff OR crop)",
+  coconut_oil: '"coconut oil" (price OR export OR harvest OR shortage OR tariff OR crop)',
+  wool:        "wool (price OR export OR harvest OR shortage OR tariff OR crop)",
+  tobacco:     "tobacco (price OR export OR harvest OR shortage OR tariff OR crop)",
+  groundnut:   "groundnut (price OR export OR harvest OR shortage OR tariff OR crop)",
+  lentils:     "lentils (price OR export OR harvest OR shortage OR tariff OR crop)",
+  millet:      "millet (price OR export OR harvest OR shortage OR tariff OR crop)",
 };
 
 const NewsManager = {
@@ -54,12 +56,24 @@ const NewsManager = {
 
     try {
       const query = encodeURIComponent(keywords);
-      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${query}&mode=artlist&maxrecords=8&format=json&sort=datedesc&timespan=3months`;
+      // sort omis volontairement → tri par pertinence (défaut GDELT) ; datedesc renvoyait
+      // les articles les plus récents sans rapport avec la denrée (cf. diagnostic C8).
+      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${query}&mode=artlist&maxrecords=8&format=json&timespan=3months`;
 
       const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-      const json = await response.json();
+      // Parsing défensif : GDELT renvoie ses erreurs (syntaxe de requête, rate limit)
+      // en TEXTE BRUT avec un HTTP 200. response.json() lèverait alors et le catch
+      // masquerait la cause. On lit le texte puis on tente le parse en consignant le brut.
+      const bodyText = await response.text();
+      let json;
+      try {
+        json = JSON.parse(bodyText);
+      } catch (parseError) {
+        console.warn(`[GDELT] Réponse non-JSON (HTTP ${response.status}):`, bodyText.substring(0, 200));
+        return [];
+      }
 
       let articles = [];
       if (json && json.articles) {
@@ -96,7 +110,7 @@ const NewsManager = {
       return articles;
 
     } catch (error) {
-      console.warn("GDELT API failed:", error.message);
+      console.warn("[GDELT] Erreur réseau:", error.message || error);
       return [];
     }
   },
