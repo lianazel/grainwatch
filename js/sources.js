@@ -72,6 +72,10 @@ const SourcesPage = {
     document.querySelector('.sidebar').style.display = 'none';
     document.querySelector('.detail-panel').style.display = 'none';
     document.getElementById('exportPage').style.display = 'none';
+    // v0.9.2 : Géo et Sources sont tous deux accessibles via le menu → masquer
+    // geoPage évite l'empilement des deux pages (chemin Géo → menu → Sources).
+    const geoPage = document.getElementById('geoPage');
+    if (geoPage) geoPage.style.display = 'none';
     document.getElementById('sourcesPage').style.display = 'flex';
   },
 

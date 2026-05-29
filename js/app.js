@@ -73,6 +73,7 @@ const App = {
     // Initialize export page
     ExportPage.init();
     SourcesPage.init();
+    GeoPage.init();
     AlertsManager.init();
     this._initTheme();
     this._updateExportVisibility();
@@ -496,8 +497,9 @@ const App = {
       // Refresh sidebar
       await this.loadAllPrices();
 
-      // Load geopolitical news (async, non-blocking)
-      this.loadNews(selectedCommodity, I18N.commodityName(commodity));
+      // v0.9.2 : plus d'appel GDELT automatique ici. Le contexte géopolitique est
+      // désormais chargé à la demande depuis la page dédiée (GeoPage) → évite de
+      // taper le rate-limit GDELT en naviguant entre denrées (cf. C10).
 
     } catch (error) {
       console.error("Error loading detail:", error.message);
@@ -915,16 +917,6 @@ const App = {
   },
 
   // --------------------------------------------------------
-  // GEOPOLITICAL NEWS
-  // --------------------------------------------------------
-  async loadNews(commodityId, commodityName) {
-    const articles = await NewsManager.fetchNews(commodityId);
-    NewsManager.render(articles, commodityName);
-  },
-
-
-
-  // --------------------------------------------------------
   // LOADING STATE
   // --------------------------------------------------------
   setLoading(isLoading) {
@@ -1158,6 +1150,15 @@ const App = {
       moreBtn.addEventListener('click', () => {
         this.closeMenu();
         if (typeof SourcesPage !== 'undefined' && SourcesPage.open) SourcesPage.open();
+      });
+    }
+
+    // « Contexte géopolitique » → page GDELT dédiée (chargement à la demande)
+    const geoBtn = document.getElementById('openGeoPage');
+    if (geoBtn) {
+      geoBtn.addEventListener('click', () => {
+        this.closeMenu();
+        if (typeof GeoPage !== 'undefined' && GeoPage.open) GeoPage.open();
       });
     }
 

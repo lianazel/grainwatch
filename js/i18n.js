@@ -207,6 +207,16 @@ const I18N = {
     "geo_loading":        { fr: "Chargement des actualités...", en: "Loading news..." },
     "geo_empty":          { fr: "Aucune actualité récente trouvée pour", en: "No recent news found for" },
 
+    // Geo dedicated page (v0.9.2) — chargement GDELT à la demande
+    "menu_geo":           { fr: "Géopolitique", en: "Geopolitics" },
+    "menu_geo_open":      { fr: "🌍 Contexte géopolitique", en: "🌍 Geopolitical context" },
+    "geo_back":           { fr: "Retour au tableau de bord", en: "Back to dashboard" },
+    "geo_page_title":     { fr: "Contexte géopolitique", en: "Geopolitical context" },
+    "geo_step1_title":    { fr: "Choisir une denrée", en: "Choose a commodity" },
+    "geo_step2_title":    { fr: "Actualités", en: "News" },
+    "geo_load_btn":       { fr: "Afficher les infos géopolitiques", en: "Show geopolitical news" },
+    "geo_page_hint":      { fr: "Sélectionnez une denrée puis cliquez sur « Afficher les infos géopolitiques ».", en: "Select a commodity, then click \"Show geopolitical news\"." },
+
     // Customize panel
     "customize_btn":      { fr: "Personnaliser", en: "Customize" },
     "customize_title":    { fr: "Denrées affichées", en: "Displayed commodities" },

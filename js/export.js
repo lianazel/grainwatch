@@ -142,6 +142,9 @@ const ExportPage = {
     // Hide dashboard, show export page
     document.querySelector('.sidebar').style.display = 'none';
     document.querySelector('.detail-panel').style.display = 'none';
+    // v0.9.2 : masquer geoPage par symétrie (évite tout empilement de pages).
+    const geoPage = document.getElementById('geoPage');
+    if (geoPage) geoPage.style.display = 'none';
     document.getElementById('exportPage').style.display = 'block';
 
     // Reset fetch state

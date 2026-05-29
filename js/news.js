@@ -119,13 +119,24 @@ const NewsManager = {
   },
 
   /**
-   * Render articles in the geo panel
+   * Render articles into a geo container.
+   * @param {Array} articles
+   * @param {string} commodityName
+   * @param {object} [opts]
+   * @param {HTMLElement} [opts.articlesEl] conteneur des articles (défaut : #geoArticles)
+   * @param {HTMLElement|null} [opts.subtitleEl] sous-titre (défaut : #geoSubtitle ; null = aucun)
    */
-  render(articles, commodityName) {
-    const container = document.getElementById("geoArticles");
-    const subtitle = document.getElementById("geoSubtitle");
+  render(articles, commodityName, opts = {}) {
+    // Cibles paramétrables : la page géopolitique dédiée (v0.9.2) réutilise ce
+    // render avec ses propres conteneurs. Défauts = ancien panneau dashboard
+    // pour rester rétrocompatible avec d'éventuels appelants existants.
+    const container = opts.articlesEl || document.getElementById("geoArticles");
+    const subtitle = opts.subtitleEl !== undefined
+      ? opts.subtitleEl
+      : document.getElementById("geoSubtitle");
+    if (!container) return; // garde-fou : pas de conteneur cible, on sort
 
-    subtitle.textContent = `${I18N.t("geo_subtitle")} ${commodityName}`;
+    if (subtitle) subtitle.textContent = `${I18N.t("geo_subtitle")} ${commodityName}`;
 
     if (!articles || articles.length === 0) {
       container.innerHTML = `<div class="geo-empty">${I18N.t("geo_empty")} ${commodityName}.</div>`;

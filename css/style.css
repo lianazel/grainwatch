@@ -1471,6 +1471,20 @@ body {
   font-size: 13px;
 }
 
+/* Page géopolitique dédiée (v0.9.2) : le sous-titre .geo-subtitle est conçu pour
+   l'ancien header sombre (couleur --ble-light) → illisible sur le fond crème de la
+   page. On le repasse en gris secondaire, lisible en thème clair ET sombre. */
+#geoPage .geo-subtitle {
+  color: var(--grey);
+  margin-bottom: 4px;
+}
+/* La page réutilise .geo-articles (max-height + scroll de l'ancien panneau) : sur une
+   page dédiée on laisse respirer la liste plutôt que de la borner à 400px. */
+#geoPage .geo-articles {
+  max-height: none;
+  padding: 0;
+}
+
 .geo-loading::before {
   content: "";
   display: inline-block;

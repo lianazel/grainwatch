@@ -307,16 +307,10 @@
         </button>
       </div>
 
-      <!-- GEOPOLITICAL CONTEXT -->
-      <div class="geo-panel" id="geoPanel">
-        <div class="geo-header">
-          <h3>🌍 <span data-i18n="geo_title">Contexte géopolitique</span></h3>
-          <span class="geo-subtitle" id="geoSubtitle">Actualités liées au Blé</span>
-        </div>
-        <div class="geo-articles" id="geoArticles">
-          <div class="geo-loading" data-i18n="geo_loading">Chargement des actualités...</div>
-        </div>
-      </div>
+      <!-- Le contexte géopolitique (GDELT) a quitté le dashboard en v0.9.2 :
+           il vit désormais sur une page dédiée (#geoPage) accessible via le menu,
+           avec chargement à la demande (1 denrée = 1 requête) → respecte le
+           rate-limit GDELT (1 req/5 s, cf. C10). -->
     </section>
     <!-- ═══════════════════════════════════════ -->
     <!-- EXPORT PAGE (hidden by default)        -->
@@ -570,6 +564,57 @@
       </div>
     </section>
 
+    <!-- ═══════════════════════════════════════ -->
+    <!-- GEOPOLITICAL PAGE (hidden by default)  -->
+    <!-- ═══════════════════════════════════════ -->
+    <section class="export-page" id="geoPage" style="display:none;">
+      <!-- Back button (même classe que l'export) -->
+      <button class="export-back-btn" id="geoBackBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <span data-i18n="geo_back">Retour au tableau de bord</span>
+      </button>
+
+      <h2 class="export-page-title">
+        <span aria-hidden="true">🌍</span>
+        <span data-i18n="geo_page_title">Contexte géopolitique</span>
+      </h2>
+
+      <!-- ── Step 1 : choisir la denrée ── -->
+      <div class="export-section">
+        <h3 class="export-section-title">
+          <span class="export-step">1</span>
+          <span data-i18n="geo_step1_title">Choisir une denrée</span>
+        </h3>
+        <div class="export-commodity-selector">
+          <select class="export-commodity-select" id="geoCommoditySelect">
+            <option value="" data-i18n="export_select_placeholder">Choisir une denrée...</option>
+          </select>
+          <button class="export-add-btn" id="geoLoadBtn" data-i18n="geo_load_btn">
+            Afficher les infos géopolitiques
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Step 2 : résultats ── -->
+      <div class="export-section">
+        <h3 class="export-section-title">
+          <span class="export-step">2</span>
+          <span data-i18n="geo_step2_title">Actualités</span>
+        </h3>
+        <p class="geo-subtitle" id="geoPageSubtitle"></p>
+        <div class="geo-loading" id="geoPageLoading" style="display:none;" data-i18n="geo_loading">
+          Chargement des actualités…
+        </div>
+        <div class="geo-articles" id="geoPageArticles">
+          <div class="geo-empty" data-i18n="geo_page_hint">
+            Sélectionnez une denrée puis cliquez sur « Afficher les infos géopolitiques ».
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- ═══════════════════════════════════════ -->
@@ -621,10 +666,16 @@
       <button class="menu-link-btn" id="menuSourcesMore" data-i18n="menu_sources_more">En savoir plus</button>
     </section>
 
+    <!-- Section: Géopolitique — page dédiée GDELT à la demande (v0.9.2) -->
+    <section class="menu-section">
+      <h3 class="menu-section-title" data-i18n="menu_geo">Géopolitique</h3>
+      <button class="menu-link-btn" id="openGeoPage" data-i18n="menu_geo_open">🌍 Contexte géopolitique</button>
+    </section>
+
     <!-- Section: À propos -->
     <section class="menu-section">
       <h3 class="menu-section-title" data-i18n="menu_about">À propos</h3>
-      <p class="menu-about-version" id="menuAboutVersion">GrainWatch v0.9.1</p>
+      <p class="menu-about-version" id="menuAboutVersion">GrainWatch v0.9.2</p>
       <p class="menu-about-text" data-i18n="menu_about_text">Outil éducatif de suivi des cours mondiaux des denrées alimentaires.</p>
       <p class="menu-disclaimer" data-i18n="disclaimer">⚠ Cet outil est fourni à titre éducatif uniquement. Il ne constitue en aucun cas un conseil financier ou d'investissement. Les cours affichés proviennent de sources publiques et peuvent présenter un décalage temporel.</p>
       <p class="menu-no-tracking" data-i18n="menu_no_tracking">🔒 Pas de cookies tiers, pas de tracking.</p>
@@ -645,6 +696,7 @@
   <script src="js/alerts.js"></script>
     <script src="js/sources.js"></script>
   <script src="js/export.js"></script>
+  <script src="js/geo.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
