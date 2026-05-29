@@ -48,7 +48,16 @@ module.exports = async function handler(req, res) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000); // latence Vercel↔GDELT > 10s en prod (C9-bis)
   try {
-    const response = await fetch(gdeltUrl, { signal: controller.signal });
+    const response = await fetch(gdeltUrl, {
+      signal: controller.signal,
+      headers: {
+        // GDELT DOC 2.0 rejette les requêtes sans User-Agent (rate-limit/blocage
+        // des clients non identifiés). En navigateur le UA était implicite ; depuis
+        // Vercel (Node/undici) il faut le poser explicitement, sinon → échec → 502. (C10)
+        "User-Agent": "GrainWatch/0.9.1 (+https://grainwatch.vercel.app)",
+        "Accept": "application/json",
+      },
+    });
     clearTimeout(timeout);
 
     // Parsing défensif (même logique que news.js C8) : GDELT renvoie ses
@@ -61,7 +70,8 @@ module.exports = async function handler(req, res) {
       console.warn("[GDELT Proxy] Réponse non-JSON:", bodyText.substring(0, 200));
       res.status(502).json({
         error: "GDELT returned non-JSON response",
-        detail: bodyText.substring(0, 200),
+        gdeltStatus: response.status,                 // statut HTTP réel renvoyé par GDELT (C10)
+        detail: bodyText.substring(0, 300),
       });
       return;
     }
@@ -73,11 +83,15 @@ module.exports = async function handler(req, res) {
     res.status(200).json(data);
   } catch (error) {
     clearTimeout(timeout);
-    if (error.name === "AbortError") {
+    if (error.name === "AbortError" || error.name === "TimeoutError") {
       res.status(504).json({ error: "GDELT request timeout (25s)" });
     } else {
-      console.error("[GDELT Proxy] Erreur:", error.message || error);
-      res.status(502).json({ error: "Failed to fetch from GDELT" });
+      console.error("[GDELT Proxy] Erreur:", error.name, error.message || error);
+      res.status(502).json({
+        error: "Failed to fetch from GDELT",
+        errorName: error.name,                        // ex: TypeError, FetchError (C10)
+        errorMessage: String(error.message || error).substring(0, 300),
+      });
     }
   }
 };
