@@ -266,7 +266,18 @@ Tout le dark mode est piloté par l'attribut `[data-theme]` sur `<html>` (`docum
 - [ ] Backend léger (Firebase/Supabase) pour alertes push
 
 ### Validation en attente
-Tests UX runtime sur device réel (tap tooltips, menu, overflow, focus trap, re-test C4 après vidage cache Safari) — pas de navigateur dans l'env de dev. Vérif statique faite (syntaxe JS, accolades CSS, IDs référencés).
+**🔜 PRIORITÉ PROCHAINE SESSION (30/05) — Tests fonctionnels page géopolitique v0.9.2 (T4–T11)** : non exécutés (pas de navigateur dans l'env de dev). Checklist détaillée dans `tasks/RAPPORT_FEATURE_PAGE_GEOPOLITIQUE_v1.md` §5. À dérouler sur `https://grainwatch.vercel.app/` ou iPhone :
+- T4 : plus de panneau géo sous le graphique du dashboard.
+- T5 : navigation entre denrées = **zéro** requête `/api/gdelt` (onglet Réseau DevTools) — c'est le cœur de la feature.
+- T6 : menu → « 🌍 Contexte géopolitique » ouvre la page.
+- T7 : choisir denrée → clic bouton → spinner → articles (bouton désactivé pendant le chargement).
+- T8 : « Retour au tableau de bord » → dashboard intact.
+- T9 : thème clair + sombre OK ; FR + EN OK. T10 : zéro erreur console. T11 (anti-régression) : pages Export et Sources toujours OK (partage des classes `.export-*` + masquage mutuel des pages).
+- ⚠️ Note rate-limit GDELT : un `502 {gdeltStatus:429}` transitoire peut apparaître si on enchaîne les requêtes (1 req/5 s par IP) — ce n'est pas un bug, le cache 15 min l'absorbe en usage normal.
+
+Vérif statique v0.9.2 faite (syntaxe JS des 6 modules, `<section>` 8/8, accolades CSS 625/625, IDs 8/8, clés i18n 8/8, ordre scripts, zéro code mort).
+
+_Anciens tests UX device (v0.9.0/0.9.1) restés en attente : tap tooltips, menu, overflow, focus trap, re-test C4 après vidage cache Safari._
 
 ---
 
